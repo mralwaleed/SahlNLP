@@ -31,7 +31,7 @@ Quick Start::
     sahlnlp.mask_sensitive_info("اتصل على 0551234567", mode="tag")
 """
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 from sahlnlp.core.analyzer import (
     compute_idf,

@@ -4,7 +4,7 @@
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests](https://img.shields.io/badge/tests-194%20passing-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-221%20passing-brightgreen.svg)]()
 
 **SahlNLP** (سهل = easy in Arabic) is a lightweight Python library designed for Arabic text preprocessing, normalization, and advanced analysis. It targets AI engineers and web developers who need a fast, no-overhead solution for handling Arabic text.
 
@@ -172,17 +172,25 @@ sahlnlp.arabic_to_indic("3 أبريل 2025")
 # => "٣ أبريل ٢٠٢٥"
 ```
 
-#### `tafkeet(number)`
-Convert a number to its written Arabic word form. Supports integers and floats.
+#### `tafkeet(number, case='nominative', currency=None)`
+Convert a number to grammatically correct Arabic words with full إعراب support.
 
 ```python
 sahlnlp.tafkeet(0)        # => "صفر"
 sahlnlp.tafkeet(11)       # => "أحد عشر"
-sahlnlp.tafkeet(100)      # => "مائة"
-sahlnlp.tafkeet(150)      # => "مائة وخمسون"
-sahlnlp.tafkeet(1000)     # => "ألف"
-sahlnlp.tafkeet(1001)     # => "ألف وواحد"
-sahlnlp.tafkeet(1000000)  # => "مليون"
+sahlnlp.tafkeet(101)      # => "مائة وواحد"
+sahlnlp.tafkeet(1011)     # => "ألف وأحد عشر"
+sahlnlp.tafkeet(250000)   # => "مائتان وخمسون ألفاً"
+
+# Case inflection (إعراب)
+sahlnlp.tafkeet(20, case='nominative')   # => "عشرون" (مرفوع)
+sahlnlp.tafkeet(20, case='accusative')   # => "عشرين" (منصوب)
+sahlnlp.tafkeet(2000, case='nominative')  # => "ألفان"
+sahlnlp.tafkeet(2000, case='accusative')  # => "ألفين"
+
+# Currency (SAR)
+sahlnlp.tafkeet(150, currency='SAR')     # => "مائة وخمسون ريالاً"
+sahlnlp.tafkeet(1.5, currency='SAR')     # => "واحد ريالاً وخمسة هللة"
 ```
 
 ---

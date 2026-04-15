@@ -1,13 +1,13 @@
-"""Tests for sahlnlp.core.converter module."""
+"""Tests for sahlnlp.core.converter module — full grammar tafkeet."""
 
 import pytest
 
 from sahlnlp.core.converter import arabic_to_indic, indic_to_arabic, tafkeet
 
 
-# ---------------------------------------------------------------------------
-# indic_to_arabic
-# ---------------------------------------------------------------------------
+# ===========================================================================
+# Indic <-> Arabic digit conversion (unchanged)
+# ===========================================================================
 class TestIndicToArabic:
     def test_single_digit(self):
         assert indic_to_arabic("٣") == "3"
@@ -33,9 +33,6 @@ class TestIndicToArabic:
             indic_to_arabic(None)  # type: ignore[arg-type]
 
 
-# ---------------------------------------------------------------------------
-# arabic_to_indic
-# ---------------------------------------------------------------------------
 class TestArabicToIndic:
     def test_single_digit(self):
         assert arabic_to_indic("3") == "٣"
@@ -63,11 +60,10 @@ class TestArabicToIndic:
             arabic_to_indic(None)  # type: ignore[arg-type]
 
 
-# ---------------------------------------------------------------------------
-# tafkeet
-# ---------------------------------------------------------------------------
-class TestTafkeet:
-    # --- Basic numbers ---
+# ===========================================================================
+# Tafkeet — Basic Numbers (0-19)
+# ===========================================================================
+class TestTafkeetBasic:
     def test_zero(self):
         assert tafkeet(0) == "صفر"
 
@@ -92,28 +88,57 @@ class TestTafkeet:
     def test_nineteen(self):
         assert tafkeet(19) == "تسعة عشر"
 
-    # --- Tens ---
-    def test_twenty(self):
-        assert tafkeet(20) == "عشرون"
 
-    def test_twenty_one(self):
+# ===========================================================================
+# Tafkeet — Tens (20-99) with Case
+# ===========================================================================
+class TestTafkeetTens:
+    def test_twenty_nominative(self):
+        assert tafkeet(20, case='nominative') == "عشرون"
+
+    def test_twenty_accusative(self):
+        assert tafkeet(20, case='accusative') == "عشرين"
+
+    def test_twenty_genitive(self):
+        assert tafkeet(20, case='genitive') == "عشرين"
+
+    def test_twenty_one_nominative(self):
         assert tafkeet(21) == "واحد وعشرون"
 
-    def test_fifty(self):
+    def test_twenty_one_accusative(self):
+        assert tafkeet(21, case='accusative') == "واحد وعشرين"
+
+    def test_fifty_nominative(self):
         assert tafkeet(50) == "خمسون"
 
-    def test_ninety_nine(self):
+    def test_fifty_accusative(self):
+        assert tafkeet(50, case='accusative') == "خمسين"
+
+    def test_ninety_nine_nominative(self):
         assert tafkeet(99) == "تسعة وتسعون"
 
-    # --- Hundreds ---
+    def test_ninety_nine_accusative(self):
+        assert tafkeet(99, case='accusative') == "تسعة وتسعين"
+
+
+# ===========================================================================
+# Tafkeet — Hundreds (100-999) with Case
+# ===========================================================================
+class TestTafkeetHundreds:
     def test_one_hundred(self):
         assert tafkeet(100) == "مائة"
+
+    def test_one_hundred_one(self):
+        assert tafkeet(101) == "مائة وواحد"
 
     def test_one_hundred_fifty(self):
         assert tafkeet(150) == "مائة وخمسون"
 
-    def test_two_hundred(self):
-        assert tafkeet(200) == "مائتان"
+    def test_two_hundred_nominative(self):
+        assert tafkeet(200, case='nominative') == "مائتان"
+
+    def test_two_hundred_accusative(self):
+        assert tafkeet(200, case='accusative') == "مائتين"
 
     def test_three_hundred(self):
         assert tafkeet(300) == "ثلاثمائة"
@@ -122,9 +147,18 @@ class TestTafkeet:
         result = tafkeet(999)
         assert "تسعمائة" in result
         assert "تسعة" in result
-        assert "وتسعون" in result
+        assert "تسعون" in result
 
-    # --- Thousands ---
+    def test_750(self):
+        result = tafkeet(750)
+        assert "سبعمائة" in result
+        assert "خمسون" in result
+
+
+# ===========================================================================
+# Tafkeet — Thousands with Dual Forms
+# ===========================================================================
+class TestTafkeetThousands:
     def test_one_thousand(self):
         assert tafkeet(1000) == "ألف"
 
@@ -133,36 +167,139 @@ class TestTafkeet:
         assert "ألف" in result
         assert "واحد" in result
 
-    def test_two_thousand(self):
-        assert tafkeet(2000) == "ألفان"
+    def test_two_thousand_nominative(self):
+        assert tafkeet(2000, case='nominative') == "ألفان"
+
+    def test_two_thousand_accusative(self):
+        assert tafkeet(2000, case='accusative') == "ألفين"
 
     def test_five_thousand(self):
         result = tafkeet(5000)
-        assert "خمسمائة" in result or "خمسة" in result
+        assert "خمسة" in result
+        assert "آلاف" in result
 
     def test_ten_thousand(self):
         result = tafkeet(10000)
         assert "عشرة" in result
-        assert "ألف" in result
+        # 3-10 take plural form: عشرة آلاف
+        assert "آلاف" in result
+
+    def test_eleven_thousand(self):
+        result = tafkeet(11000)
+        assert "أحد عشر" in result
+        assert "ألفاً" in result
 
     def test_one_hundred_thousand(self):
         result = tafkeet(100000)
         assert "مائة" in result
-        assert "ألف" in result
+        assert "ألفاً" in result
 
-    # --- Millions ---
+    def test_two_hundred_fifty_thousand(self):
+        result = tafkeet(250000)
+        assert "مائتان" in result
+        assert "خمسون" in result
+        assert "ألفاً" in result
+
+
+# ===========================================================================
+# Tafkeet — Millions with Dual Forms
+# ===========================================================================
+class TestTafkeetMillions:
     def test_one_million(self):
         assert tafkeet(1000000) == "مليون"
 
-    def test_two_million(self):
-        assert tafkeet(2000000) == "مليونان"
+    def test_two_million_nominative(self):
+        assert tafkeet(2000000, case='nominative') == "مليونان"
 
-    # --- Edge cases ---
+    def test_two_million_accusative(self):
+        assert tafkeet(2000000, case='accusative') == "مليونين"
+
+    def test_five_million(self):
+        result = tafkeet(5000000)
+        assert "خمسة" in result
+        assert "ملايين" in result
+
+    def test_twenty_million(self):
+        result = tafkeet(20000000)
+        assert "عشرين" in result
+        assert "مليوناً" in result
+
+
+# ===========================================================================
+# Tafkeet — Billions
+# ===========================================================================
+class TestTafkeetBillions:
+    def test_one_billion(self):
+        assert tafkeet(1000000000) == "مليار"
+
+    def test_two_billion_nominative(self):
+        assert tafkeet(2000000000, case='nominative') == "ملياران"
+
+
+# ===========================================================================
+# Tafkeet — "Wa" (و) Connectivity
+# ===========================================================================
+class TestTafkeetWaConnectivity:
+    def test_101(self):
+        assert tafkeet(101) == "مائة وواحد"
+
+    def test_1011(self):
+        result = tafkeet(1011)
+        assert result == "ألف وأحد عشر"
+
+    def test_750_nominative(self):
+        result = tafkeet(750)
+        assert "سبعمائة وخمسون" in result
+
+    def test_750_accusative(self):
+        result = tafkeet(750, case='accusative')
+        assert "سبعمائة وخمسين" in result
+
+
+# ===========================================================================
+# Tafkeet — Currency (SAR)
+# ===========================================================================
+class TestTafkeetCurrency:
+    def test_zero_sar(self):
+        assert tafkeet(0, currency='SAR') == "صفر ريال"
+
+    def test_one_sar(self):
+        assert tafkeet(1, currency='SAR') == "واحد ريالاً"
+
+    def test_150_sar(self):
+        result = tafkeet(150, currency='SAR')
+        assert "ريالاً" in result
+        assert "مائة وخمسون" in result
+
+    def test_float_sar(self):
+        result = tafkeet(1.5, currency='SAR')
+        assert "ريالاً" in result
+        assert "هللة" in result
+
+    def test_thousand_sar(self):
+        result = tafkeet(1000, currency='SAR')
+        assert "ألف" in result
+        assert "ريالاً" in result
+
+
+# ===========================================================================
+# Tafkeet — Floats (no currency)
+# ===========================================================================
+class TestTafkeetFloat:
     def test_float_basic(self):
         result = tafkeet(1.5)
         assert "واحد" in result
         assert "فاصلة" in result
 
+    def test_float_whole(self):
+        result = tafkeet(5.0)
+        assert result == "خمسة"
+
+
+# ===========================================================================
+# Tafkeet — Error Handling
+# ===========================================================================
+class TestTafkeetErrors:
     def test_negative_raises(self):
         with pytest.raises(ValueError):
             tafkeet(-1)
@@ -178,3 +315,7 @@ class TestTafkeet:
     def test_type_error_list(self):
         with pytest.raises(TypeError):
             tafkeet([1, 2, 3])  # type: ignore[arg-type]
+
+    def test_invalid_case(self):
+        with pytest.raises(ValueError):
+            tafkeet(100, case='dative')

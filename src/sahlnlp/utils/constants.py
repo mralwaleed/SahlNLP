@@ -103,8 +103,10 @@ RE_INDIC_DIGITS = re.compile(r'[٠-٩]')
 RE_ARABIC_DIGITS = re.compile(r'[0-9]')
 
 # ---------------------------------------------------------------------------
-# Tafkeet (Number to Arabic Words)
+# Tafkeet (Number to Arabic Words) — Full Grammar Support
 # ---------------------------------------------------------------------------
+
+# Base digit/teen words (0-19)
 ARABIC_ONES = {
     0: 'صفر',
     1: 'واحد',
@@ -128,7 +130,9 @@ ARABIC_ONES = {
     19: 'تسعة عشر',
 }
 
-ARABIC_TENS = {
+# Tens (20-90) with case variants
+# Nominative: عشرون, ثلاثون...  Accusative/Genitive: عشرين, ثلاثين...
+ARABIC_TENS_NOMINATIVE = {
     2: 'عشرون',
     3: 'ثلاثون',
     4: 'أربعون',
@@ -139,7 +143,23 @@ ARABIC_TENS = {
     9: 'تسعون',
 }
 
-ARABIC_HUNDREDS = {
+ARABIC_TENS_ACCUSATIVE = {
+    2: 'عشرين',
+    3: 'ثلاثين',
+    4: 'أربعين',
+    5: 'خمسين',
+    6: 'ستين',
+    7: 'سبعين',
+    8: 'ثمانين',
+    9: 'تسعين',
+}
+
+# Backward-compatible default (nominative)
+ARABIC_TENS = ARABIC_TENS_NOMINATIVE
+
+# Hundreds with case variants
+# Nominative: مائتان  Accusative/Genitive: مائتين
+ARABIC_HUNDREDS_NOMINATIVE = {
     1: 'مائة',
     2: 'مائتان',
     3: 'ثلاثمائة',
@@ -151,12 +171,39 @@ ARABIC_HUNDREDS = {
     9: 'تسعمائة',
 }
 
-ARABIC_SCALE = {
+ARABIC_HUNDREDS_ACCUSATIVE = {
+    1: 'مائة',
+    2: 'مائتين',
+    3: 'ثلاثمائة',
+    4: 'أربعمائة',
+    5: 'خمسمائة',
+    6: 'ستمائة',
+    7: 'سبعمائة',
+    8: 'ثمانمائة',
+    9: 'تسعمائة',
+}
+
+# Backward-compatible default (nominative)
+ARABIC_HUNDREDS = ARABIC_HUNDREDS_NOMINATIVE
+
+# Scale (thousands, millions, billions, trillions) with case variants
+# Each: (singular, dual_nominative, dual_accusative, plural_genitive)
+ARABIC_SCALE_NOMINATIVE = {
     1: ('ألف', 'ألفان', 'آلاف'),
     2: ('مليون', 'مليونان', 'ملايين'),
     3: ('مليار', 'ملياران', 'مليارات'),
     4: ('تريليون', 'تريليونان', 'تريليونات'),
 }
+
+ARABIC_SCALE_ACCUSATIVE = {
+    1: ('ألفاً', 'ألفين', 'آلاف'),
+    2: ('مليوناً', 'مليونين', 'ملايين'),
+    3: ('ملياراً', 'مليارين', 'مليارات'),
+    4: ('تريليوناً', 'تريليونين', 'تريليونات'),
+}
+
+# Backward-compatible default (nominative)
+ARABIC_SCALE = ARABIC_SCALE_NOMINATIVE
 
 # ---------------------------------------------------------------------------
 # PII Detection Patterns (Guardian Module)

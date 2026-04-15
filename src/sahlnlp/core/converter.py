@@ -1,21 +1,45 @@
 """
 Number conversion utilities for Arabic text.
 
-Handles Hindi/Arabic numeral conversion and number-to-words (tafkeet).
+Handles Hindi/Arabic numeral conversion and number-to-words (tafkeet)
+with full Arabic grammar support: case (إعراب), dual forms, and currency.
 """
 
 from __future__ import annotations
 
 from sahlnlp.utils.constants import (
-    ARABIC_HUNDREDS,
+    ARABIC_HUNDREDS_ACCUSATIVE,
+    ARABIC_HUNDREDS_NOMINATIVE,
     ARABIC_ONES,
-    ARABIC_SCALE,
-    ARABIC_TENS,
+    ARABIC_SCALE_ACCUSATIVE,
+    ARABIC_SCALE_NOMINATIVE,
+    ARABIC_TENS_ACCUSATIVE,
+    ARABIC_TENS_NOMINATIVE,
     ARABIC_TO_INDIC_MAP,
     INDIC_TO_ARABIC_MAP,
     RE_ARABIC_DIGITS,
     RE_INDIC_DIGITS,
 )
+
+_VALID_CASES = frozenset({'nominative', 'accusative', 'genitive'})
+
+
+def _get_tens(case: str) -> dict:
+    if case == 'nominative':
+        return ARABIC_TENS_NOMINATIVE
+    return ARABIC_TENS_ACCUSATIVE
+
+
+def _get_hundreds(case: str) -> dict:
+    if case == 'nominative':
+        return ARABIC_HUNDREDS_NOMINATIVE
+    return ARABIC_HUNDREDS_ACCUSATIVE
+
+
+def _get_scale(case: str) -> dict:
+    if case == 'nominative':
+        return ARABIC_SCALE_NOMINATIVE
+    return ARABIC_SCALE_ACCUSATIVE
 
 
 def indic_to_arabic(text: str) -> str:
@@ -54,92 +78,138 @@ def arabic_to_indic(text: str) -> str:
     return RE_ARABIC_DIGITS.sub(lambda m: ARABIC_TO_INDIC_MAP[m.group()], text)
 
 
-def _convert_below_1000(n: int) -> str:
-    """Convert an integer 0-999 to Arabic words (internal helper)."""
+def _convert_below_1000(n: int, case: str = 'nominative') -> str:
+    """Convert an integer 0-999 to Arabic words with grammatical case."""
     if n == 0:
         return ""
 
+    hundreds_map = _get_hundreds(case)
+    tens_map = _get_tens(case)
+
     parts: list[str] = []
 
-    # Hundreds
     hundreds = n // 100
     remainder = n % 100
 
     if hundreds > 0:
-        parts.append(ARABIC_HUNDREDS[hundreds])
+        parts.append(hundreds_map[hundreds])
 
     if remainder == 0:
         return " ".join(parts)
 
-    # 1-19
     if remainder < 20:
         parts.append(ARABIC_ONES[remainder])
     else:
         tens_val = remainder // 10
         ones_val = remainder % 10
         if ones_val == 0:
-            parts.append(ARABIC_TENS[tens_val])
+            parts.append(tens_map[tens_val])
         else:
-            parts.append(f"{ARABIC_ONES[ones_val]} و{ARABIC_TENS[tens_val]}")
+            parts.append(f"{ARABIC_ONES[ones_val]} و{tens_map[tens_val]}")
 
     return " و".join(parts)
 
 
-def tafkeet(number: int | float) -> str:
-    """Convert a number to its written Arabic word form.
+def tafkeet(
+    number: int | float,
+    case: str = 'nominative',
+    currency: str | None = None,
+) -> str:
+    """Convert a number to grammatically correct Arabic words.
 
-    Supports integers from 0 up to trillions, and basic decimal fractions.
+    Supports full Arabic grammar: case inflection (إعراب), dual forms
+    for thousands/millions, proper و placement, and optional currency.
 
     Args:
         number: The number to convert (int or float).
+        case: Grammatical case for inflection.
+            - ``'nominative'`` (مرفوع): عشرون، مائتان، ألفان
+            - ``'accusative'`` (منصوب): عشرين، مائتين، ألفين
+            - ``'genitive'`` (مجرور): عشرين، مائتين، ألفين
+        currency: Optional currency code.
+            - ``'SAR'``: appends ريال(s) / هللة for decimals.
 
     Returns:
-        The number spelled out in Arabic words.
+        The number spelled out in grammatically correct Arabic words.
 
     Raises:
         TypeError: If the input is not a number.
-        ValueError: If the number is negative or too large.
+        ValueError: If the number is negative or case is invalid.
 
     Examples:
         >>> tafkeet(0)
         'صفر'
-        >>> tafkeet(150)
-        'مائة وخمسون'
-        >>> tafkeet(1001)
-        'ألف وواحد'
+        >>> tafkeet(101)
+        'مائة وواحد'
+        >>> tafkeet(2000, case='nominative')
+        'ألفان'
+        >>> tafkeet(2000, case='accusative')
+        'ألفين'
+        >>> tafkeet(1011)
+        'ألف وأحد عشر'
+        >>> tafkeet(250000)
+        'مائتان وخمسون ألفاً'
+        >>> tafkeet(150, currency='SAR')
+        'مائة وخمسون ريالاً'
     """
     if not isinstance(number, (int, float)):
         raise TypeError(f"Expected int or float, got {type(number).__name__}")
+    if case not in _VALID_CASES:
+        raise ValueError(f"case must be one of {_VALID_CASES}, got '{case}'")
 
+    # Handle float: split into integer and decimal parts
     if isinstance(number, float):
         int_part = int(number)
         dec_part = round((number - int_part) * 100)
-        int_words = tafkeet(int_part)
+        int_words = tafkeet(int_part, case=case, currency=None)
         if dec_part > 0:
-            dec_words = tafkeet(dec_part)
+            if currency == 'SAR':
+                dec_words = tafkeet(dec_part, case=case, currency=None)
+                return f"{int_words} ريالاً و{dec_words} هللة"
+            dec_words = tafkeet(dec_part, case=case)
             return f"{int_words} فاصلة {dec_words}"
+        if currency == 'SAR' and int_part > 0:
+            return f"{int_words} ريالاً"
         return int_words
 
     if number < 0:
         raise ValueError("Negative numbers are not supported")
 
     if number == 0:
+        if currency == 'SAR':
+            return "صفر ريال"
         return ARABIC_ONES[0]
 
     if number < 20:
-        return ARABIC_ONES[number]
+        result = ARABIC_ONES[number]
+        if currency == 'SAR':
+            return f"{result} ريالاً"
+        return result
 
+    # 20-99
     if number < 100:
+        tens_map = _get_tens(case)
         tens_val = number // 10
         ones_val = number % 10
         if ones_val == 0:
-            return ARABIC_TENS[tens_val]
-        return f"{ARABIC_ONES[ones_val]} و{ARABIC_TENS[tens_val]}"
+            result = tens_map[tens_val]
+        else:
+            result = f"{ARABIC_ONES[ones_val]} و{tens_map[tens_val]}"
+        if currency == 'SAR':
+            return f"{result} ريالاً"
+        return result
 
+    # 100-999
     if number < 1000:
-        return _convert_below_1000(number)
+        result = _convert_below_1000(number, case)
+        if currency == 'SAR':
+            return f"{result} ريالاً"
+        return result
 
-    # Process in groups of 3 digits (thousands, millions, billions, trillions)
+    # Large numbers: process in groups of 3 digits
+    scale_map = _get_scale(case)
+    tens_map = _get_tens(case)
+
     groups: list[tuple[int, int]] = []  # (value, scale_index)
     remaining = number
     scale_idx = 0
@@ -153,21 +223,31 @@ def tafkeet(number: int | float) -> str:
     parts: list[str] = []
     for group_val, scale_idx in reversed(groups):
         if scale_idx == 0:
-            parts.append(_convert_below_1000(group_val))
+            parts.append(_convert_below_1000(group_val, case))
         else:
-            singular, dual, plural = ARABIC_SCALE[scale_idx]
-            group_text = _convert_below_1000(group_val)
+            singular, dual, plural = scale_map[scale_idx]
+            nom_singular = ARABIC_SCALE_NOMINATIVE[scale_idx][0]
 
             if group_val == 1:
                 parts.append(singular)
             elif group_val == 2:
                 parts.append(dual)
-            elif group_val <= 10:
-                parts.append(f"{group_text} {singular}")
-            elif group_val < 100:
+            elif 3 <= group_val <= 10:
+                # 3-10: plural form (آلاف, ملايين) — number precedes scale
+                group_text = _convert_below_1000(group_val, case)
                 parts.append(f"{group_text} {plural}")
+            elif 11 <= group_val <= 99:
+                # 11-99: singular accusative with tanween (ألفاً, مليوناً)
+                group_acc = _convert_below_1000(group_val, 'accusative')
+                parts.append(f"{group_acc} {nom_singular}اً")
             else:
-                parts.append(f"{group_text} {singular}")
+                # 100+: singular accusative with tanween
+                group_text = _convert_below_1000(group_val, case)
+                parts.append(f"{group_text} {nom_singular}اً")
 
     result = " و".join(parts)
+
+    if currency == 'SAR':
+        return f"{result} ريالاً"
+
     return result
