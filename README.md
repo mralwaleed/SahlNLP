@@ -65,6 +65,203 @@ sahlnlp.suggest_correction("مدرية", ["مدرسة", "مدينة", "مربي�
 
 ---
 
+## Architecture & Data Flow
+
+### Package Structure
+
+```mermaid
+classDiagram
+    direction LR
+
+    class __init__ {
+        +clean_all()
+        +remove_tashkeel()
+        +remove_tatweel()
+        +remove_html_and_links()
+        +remove_repeated_chars()
+        +normalize_hamza()
+        +normalize_taa()
+        +normalize_yaa()
+        +normalize_search()
+        +indic_to_arabic()
+        +arabic_to_indic()
+        +tafkeet()
+        +detect_dialect()
+        +extract_keywords()
+        +suggest_correction()
+        +compute_tf()
+        +compute_idf()
+        +mask_sensitive_info()
+    }
+
+    class cleaner {
+        remove_tashkeel(text)
+        remove_tatweel(text)
+        remove_html_and_links(text)
+        remove_repeated_chars(text, max_repeat)
+        clean_all(text, ...flags)
+    }
+
+    class normalizer {
+        normalize_hamza(text)
+        normalize_taa(text, to_haa)
+        normalize_yaa(text)
+        normalize_search(text)
+    }
+
+    class converter {
+        indic_to_arabic(text)
+        arabic_to_indic(text)
+        tafkeet(number, case, currency)
+    }
+
+    class analyzer {
+        detect_dialect(text)
+        extract_keywords(text, top_n)
+        suggest_correction(word, dictionary)
+        compute_tf(tokens)
+        compute_idf(documents)
+    }
+
+    class guardian {
+        mask_sensitive_info(text, mode, mask_char)
+    }
+
+    class constants {
+        Pre-compiled Regex
+        Unicode maps
+        Tafkeet dicts
+        PII patterns
+    }
+
+    class dictionaries {
+        Dialect lexicons
+        Stop-words
+        Keyboard map
+    }
+
+    __init__ ..> cleaner : imports
+    __init__ ..> normalizer : imports
+    __init__ ..> converter : imports
+    __init__ ..> analyzer : imports
+    __init__ ..> guardian : imports
+    cleaner ..> constants : regex
+    normalizer ..> constants : char maps
+    normalizer ..> cleaner : remove_tashkeel
+    converter ..> constants : dicts
+    analyzer ..> dictionaries : lexicons
+    guardian ..> constants : PII regex
+```
+
+### `clean_all()` Execution Sequence
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant API as __init__.py
+    participant Cleaner as cleaner.py
+    participant Regex as Pre-compiled Patterns
+
+    User->>API: sahlnlp.clean_all(noisy_text)
+    API->>Cleaner: clean_all(text, flags=True)
+
+    alt remove_tashkeel_flag
+        Cleaner->>Regex: RE_TASHKEEL.sub("", text)
+        Regex-->>Cleaner: text without diacritics
+    end
+
+    alt remove_tatweel_flag
+        Cleaner->>Regex: RE_TATWEEL.sub("", text)
+        Regex-->>Cleaner: text without kashida
+    end
+
+    alt remove_html_flag
+        Cleaner->>Regex: RE_URL.sub("", text)
+        Regex-->>Cleaner: text without URLs
+        Cleaner->>Regex: RE_HTML_TAGS.sub("", text)
+        Regex-->>Cleaner: text without HTML
+    end
+
+    alt remove_repeated_flag
+        Cleaner->>Regex: RE_REPEATED_CHAR.sub(fn, text)
+        Regex-->>Cleaner: flooding reduced
+    end
+
+    Cleaner-->>API: cleaned text
+    API-->>User: "مرحبا بكم في موقعنا"
+```
+
+### `tafkeet()` Decision Flow
+
+```mermaid
+flowchart TD
+    Start([Input: number, case, currency]) --> TypeCheck{int or float?}
+    TypeCheck -- No --> ErrorType[/TypeError/]
+    TypeCheck -- Yes --> SignCheck{number < 0?}
+    SignCheck -- Yes --> ErrorVal[/ValueError/]
+    SignCheck -- No --> FloatCheck{is float?}
+
+    FloatCheck -- Yes --> SplitFloat[Split int_part + dec_part]
+    SplitFloat --> RecurseInt[tafkeet int_part]
+
+    FloatCheck -- No --> ZeroCheck{number == 0?}
+    ZeroCheck -- Yes --> OutZero["صفر"]
+
+    ZeroCheck -- No --> Range1{1-19?}
+    Range1 -- Yes --> OutOnes["ARABIC_ONES[n]"]
+
+    Range1 -- No --> Range2{20-99?}
+    Range2 -- Yes --> SplitTens["tens = n//10, ones = n%10"]
+    SplitTens --> TensCompound["ONES[ones] و TENS[tens]"]
+
+    Range2 -- No --> Range3{100-999?}
+    Range3 -- Yes --> Convert100["_convert_below_1000(n, case)"]
+
+    Range3 -- No --> LargeNum[Split into groups of 3 digits]
+    LargeNum --> ForEach[For each group_val + scale]
+    ForEach --> GV1{val == 1?}
+    GV1 -- Yes --> OutSingular["singular"]
+    GV1 -- No --> GV2{val == 2?}
+    GV2 -- Yes --> OutDual["dual (case-inflected)"]
+    GV2 -- No --> GV3{"3-10?"}
+    GV3 -- Yes --> OutPlural["number + plural form"]
+    GV3 -- No --> OutAcc["number + singularاً"]
+
+    OutOnes & OutZero & TensCompound & Convert100 & OutSingular & OutDual & OutPlural & OutAcc --> Join["Join parts with و"]
+    Join --> SARCheck{currency == SAR?}
+    SARCheck -- Yes --> OutSAR["+ ريالاً"]
+    SARCheck -- No --> Done([Return])
+    OutSAR --> Done
+```
+
+### Guardian PII Masking Pipeline
+
+```mermaid
+flowchart LR
+    Input(["Raw Text"]) --> IBAN["IBAN\nDetector"]
+    IBAN --> Phone["Phone\nDetector"]
+    Phone --> ID["National ID\nDetector"]
+    ID --> Email["Email\nDetector"]
+    Email --> NameT["Name (Title)\nDetector"]
+    NameT --> NameTh["Name (Theophoric)\nDetector"]
+    NameTh --> Mode{mode?}
+    Mode -- tag --> TagOut(["[PHONE] [ID]\n[EMAIL] [NAME]"])
+    Mode -- mask --> MaskOut(["05*****567\n1********90\n********"])
+
+    style Input fill:#e1f5fe
+    style TagOut fill:#c8e6c9
+    style MaskOut fill:#c8e6c9
+    style IBAN fill:#fff9c4
+    style Phone fill:#fff9c4
+    style ID fill:#fff9c4
+    style Email fill:#fff9c4
+    style NameT fill:#fff9c4
+    style NameTh fill:#fff9c4
+    style Mode fill:#ffccbc
+```
+
+---
+
 ## API Reference
 
 ### Text Cleaning (`sahlnlp.cleaner`)
