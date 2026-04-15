@@ -157,3 +157,97 @@ ARABIC_SCALE = {
     3: ('مليار', 'ملياران', 'مليارات'),
     4: ('تريليون', 'تريليونان', 'تريليونات'),
 }
+
+# ---------------------------------------------------------------------------
+# PII Detection Patterns (Guardian Module)
+# ---------------------------------------------------------------------------
+
+# Saudi mobile numbers: +9665xxxxxxxx, 05xxxxxxxx, 5xxxxxxxx (8 trailing digits)
+# Saudi mobile numbers: +9665xxxxxxxx, 05xxxxxxxx, 5xxxxxxxx
+# Matches 9 digits (bare 5...) or 10 digits (05...) with optional spaces/dashes
+RE_SA_PHONE = re.compile(
+    r'(?<!\d)'
+    r'(?:\+966[\s-]*)?'
+    r'0?5'
+    r'\d'
+    r'(?:[\s-]*\d){7}'
+    r'(?!\d)'
+)
+
+# Saudi National ID / IQAMA: exactly 10 digits starting with 1 or 2
+RE_SA_ID = re.compile(
+    r'(?<!\d)'
+    r'[12]\d{9}'
+    r'(?!\d)'
+)
+
+# Saudi IBAN: SA followed by 22 digits (total 24 chars), with optional spaces
+RE_SA_IBAN = re.compile(
+    r'\bSA\s*\d{2}\s*\d{4}\s*\d{4}\s*\d{4}\s*\d{4}\s*\d{4}\s*\d{2}\b'
+    r'|\bSA\d{22}\b',
+    re.IGNORECASE,
+)
+
+# Email addresses (RFC 5322 simplified)
+RE_EMAIL = re.compile(
+    r'[a-zA-Z0-9._%+\-]+'
+    r'@'
+    r'[a-zA-Z0-9.\-]+'
+    r'\.'
+    r'[a-zA-Z]{2,}'
+)
+
+# Arabic name contextual prefixes — titles and honorifics that signal a name follows
+AR_NAME_PREFIXES = (
+    "السيد",
+    "السيدة",
+    "الأستاذ",
+    "الاستاذ",
+    "الأستاذة",
+    "الاستاذة",
+    "الدكتور",
+    "الدكتورة",
+    "الطبيب",
+    "الطبيبة",
+    "المهندس",
+    "المهندسة",
+    "الأخ",
+    "الاخ",
+    "الأخت",
+    "الاخت",
+    "الشيخ",
+    "الشيخة",
+    "المعالي",
+    "الفضيلة",
+    "السعادة",
+    "سعادة",
+    "معالي",
+    "فضيلة",
+    "سعادة",
+)
+
+# Arabic name components — common theophoric and patronymic prefixes
+AR_NAME_PARTICLES = (
+    "عبد",
+    "بن",
+    "بنت",
+    "آل",
+    "ال",
+)
+
+# Regex: name preceded by a title, capturing 1-4 Arabic words after the title
+# Matches: "السيد أحمد محمد علي" -> captures "أحمد محمد علي"
+RE_AR_NAME_TITLED = re.compile(
+    r'(?:' + '|'.join(AR_NAME_PREFIXES) + r')'
+    r'\s+'
+    r'([\u0621-\u063A\u0641-\u064A\u0671-\u06D3]+'
+    r'(?:\s+[\u0621-\u063A\u0641-\u064A\u0671-\u06D3]+){0,3})'
+)
+
+# Regex: theophoric/patronymic names (عبد X, بن X) — 2-4 word sequences
+RE_AR_NAME_THEOPHORIC = re.compile(
+    r'\b'
+    r'(?:عبد[\u0621-\u063A\u0641-\u064A]+|بن[\u0621-\u063A\u0641-\u064A]+)'
+    r'(?:\s+[\u0621-\u063A\u0641-\u064A]+){0,2}'
+    r'\b'
+)

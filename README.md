@@ -4,7 +4,7 @@
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests](https://img.shields.io/badge/tests-156%20passing-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-194%20passing-brightgreen.svg)]()
 
 **SahlNLP** (سهل = easy in Arabic) is a lightweight Python library designed for Arabic text preprocessing, normalization, and advanced analysis. It targets AI engineers and web developers who need a fast, no-overhead solution for handling Arabic text.
 
@@ -247,6 +247,39 @@ pytest tests/ -v
 
 ---
 
+### Security & Privacy — PII Masking (`sahlnlp.guardian`)
+
+#### `mask_sensitive_info(text, mode="tag", mask_char="*")`
+Detect and redact Personally Identifiable Information from Arabic text. Supports Saudi phone numbers, national IDs, IBANs, emails, and Arabic names (using contextual title-based detection).
+
+**Tag mode** — replaces PII with descriptive labels:
+
+```python
+sahlnlp.mask_sensitive_info(
+    "السيد أحمد رقمه 0551234567 وهويته 1234567890 وآيبان SA0380000000608010167519",
+    mode="tag",
+)
+# => "[NAME] رقمه [PHONE] وهويته [ID] وآيبان [IBAN]"
+```
+
+**Mask mode** — replaces PII with `*` while preserving first/last characters:
+
+```python
+sahlnp.mask_sensitive_info("اتصل على 0551234567", mode="mask")
+# => "اتصل على 05*****567"
+```
+
+**Detected entities:**
+| Entity | Pattern | Example |
+|--------|---------|---------|
+| Saudi Phone | `+9665...`, `05...`, `5...` | `0551234567` |
+| National ID | 10 digits starting with 1 or 2 | `1234567890` |
+| Saudi IBAN | `SA` + 22 digits | `SA0380000000608010167519` |
+| Email | Standard RFC 5322 | `user@example.com` |
+| Arabic Names | Title-prefix heuristic (`السيد`, `الدكتور`, etc.) + `عبد`/`بن` patterns | `السيد أحمد محمد` |
+
+---
+
 ## License
 
 This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
@@ -264,9 +297,9 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 - **صفر تبعيات خارجية** — تستخدم فقط مكتبة بايثون القياسية
 - **أداء عالي** — أنماط regex مجمعة مسبقاً، وبصمة ذاكرة ضئيلة
 - **كتابة الأنواع الكاملة** — دعم ممتاز للمحررات والأكمل التلقائي
-- **شامل** — تنظيف، تطبيع، تحويل أرقام، تفقيط، كشف لهجة، استخراج كلمات مفتاحية، وتطابق تقريبي
-- **خوارزميات متقدمة من الصفر** — TF-IDF، مسافة ليفنشتاين، وتصنيف اللهجات مبنية بدون مكتبات خارجية
-- **مختبر بالكامل** — 156 اختبار بنسبة نجاح 100%
+- **شامل** — تنظيف، تطبيع، تحويل أرقام، تفقيط، كشف لهجة، استخراج كلمات مفتاحية، تطابق تقريبي، وحجب المعلومات الحساسة
+- **خوارزميات متقدمة من الصفر** — TF-IDF، مسافة ليفنشتاين، تصنيف اللهجات، وحجب PII مبنية بدون مكتبات خارجية
+- **مختبر بالكامل** — 194 اختبار بنسبة نجاح 100%
 
 ## التثبيت
 
