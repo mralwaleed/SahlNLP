@@ -15,7 +15,7 @@
 - **Zero external dependencies** — only uses Python's built-in standard library
 - **High performance** — pre-compiled regex patterns, minimal memory footprint
 - **Full type hints** — excellent IDE support and autocompletion
-- **Comprehensive** — cleaning, normalization, numeral conversion, number-to-words (tafkeet), dialect detection, keyword extraction, and fuzzy matching
+- **Comprehensive** — cleaning, normalization, numeral conversion, number-to-words, dialect detection, keyword extraction, and fuzzy matching
 - **Well-tested** — 156 tests with 100% pass rate
 - **Advanced algorithms from scratch** — TF-IDF, Levenshtein distance, and weighted dialect classification built with zero external libraries
 
@@ -130,7 +130,7 @@ classDiagram
     class constants {
         Pre-compiled Regex
         Unicode maps
-        Tafkeet dicts
+        Tafkeet dicts (Number to Words)
         PII patterns
     }
 
@@ -191,7 +191,7 @@ sequenceDiagram
     API-->>User: "مرحبا بكم في موقعنا"
 ```
 
-### `tafkeet()` Decision Flow
+### `tafkeet()` Number to Words — Decision Flow
 
 ```mermaid
 flowchart TD
@@ -370,7 +370,7 @@ sahlnlp.arabic_to_indic("3 أبريل 2025")
 ```
 
 #### `tafkeet(number, case='nominative', currency=None)`
-Convert a number to grammatically correct Arabic words with full إعراب support.
+Convert a number to grammatically correct Arabic words (Number to Words) with full إعراب support.
 
 ```python
 sahlnlp.tafkeet(0)        # => "صفر"

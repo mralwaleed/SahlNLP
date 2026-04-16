@@ -1,7 +1,7 @@
 """
 Number conversion utilities for Arabic text.
 
-Handles Hindi/Arabic numeral conversion and number-to-words (tafkeet)
+Handles Hindi/Arabic numeral conversion and number-to-words
 with full Arabic grammar support: case (إعراب), dual forms, and currency.
 """
 
