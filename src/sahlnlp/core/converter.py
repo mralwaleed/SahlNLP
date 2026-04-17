@@ -7,6 +7,7 @@ with full Arabic grammar support: case (إعراب), dual forms, and currency.
 
 from __future__ import annotations
 
+from sahlnlp.utils.logger import logger
 from sahlnlp.utils.constants import (
     ARABIC_HUNDREDS_ACCUSATIVE,
     ARABIC_HUNDREDS_NOMINATIVE,
@@ -57,7 +58,11 @@ def indic_to_arabic(text: str) -> str:
     """
     if not isinstance(text, str):
         raise TypeError(f"Expected str, got {type(text).__name__}")
-    return RE_INDIC_DIGITS.sub(lambda m: INDIC_TO_ARABIC_MAP[m.group()], text)
+    try:
+        return RE_INDIC_DIGITS.sub(lambda m: INDIC_TO_ARABIC_MAP[m.group()], text)
+    except Exception:
+        logger.warning("indic_to_arabic failed, returning original text")
+        return text
 
 
 def arabic_to_indic(text: str) -> str:
@@ -75,7 +80,11 @@ def arabic_to_indic(text: str) -> str:
     """
     if not isinstance(text, str):
         raise TypeError(f"Expected str, got {type(text).__name__}")
-    return RE_ARABIC_DIGITS.sub(lambda m: ARABIC_TO_INDIC_MAP[m.group()], text)
+    try:
+        return RE_ARABIC_DIGITS.sub(lambda m: ARABIC_TO_INDIC_MAP[m.group()], text)
+    except Exception:
+        logger.warning("arabic_to_indic failed, returning original text")
+        return text
 
 
 def _convert_below_1000(n: int, case: str = 'nominative') -> str:

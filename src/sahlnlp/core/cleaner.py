@@ -13,6 +13,7 @@ from sahlnlp.utils.constants import (
     RE_TATWEEL,
     RE_URL,
 )
+from sahlnlp.utils.logger import logger
 
 
 def remove_tashkeel(text: str) -> str:
@@ -30,7 +31,11 @@ def remove_tashkeel(text: str) -> str:
     """
     if not isinstance(text, str):
         raise TypeError(f"Expected str, got {type(text).__name__}")
-    return RE_TASHKEEL.sub('', text)
+    try:
+        return RE_TASHKEEL.sub('', text)
+    except Exception:
+        logger.warning("Failed to remove tashkeel, returning original text")
+        return text
 
 
 def remove_tatweel(text: str) -> str:
@@ -48,7 +53,11 @@ def remove_tatweel(text: str) -> str:
     """
     if not isinstance(text, str):
         raise TypeError(f"Expected str, got {type(text).__name__}")
-    return RE_TATWEEL.sub('', text)
+    try:
+        return RE_TATWEEL.sub('', text)
+    except Exception:
+        logger.warning("Failed to remove tatweel, returning original text")
+        return text
 
 
 def remove_html_and_links(text: str) -> str:
@@ -66,9 +75,13 @@ def remove_html_and_links(text: str) -> str:
     """
     if not isinstance(text, str):
         raise TypeError(f"Expected str, got {type(text).__name__}")
-    text = RE_URL.sub('', text)
-    text = RE_HTML_TAGS.sub('', text)
-    return text
+    try:
+        text = RE_URL.sub('', text)
+        text = RE_HTML_TAGS.sub('', text)
+        return text
+    except Exception:
+        logger.warning("Failed to remove HTML/links, returning original text")
+        return text
 
 
 def remove_repeated_chars(text: str, max_repeat: int = 2) -> str:
@@ -94,7 +107,11 @@ def remove_repeated_chars(text: str, max_repeat: int = 2) -> str:
         char = match.group(1)
         return char * max_repeat
 
-    return RE_REPEATED_CHAR.sub(_replace, text)
+    try:
+        return RE_REPEATED_CHAR.sub(_replace, text)
+    except Exception:
+        logger.warning("Failed to remove repeated chars, returning original text")
+        return text
 
 
 def clean_all(
@@ -125,12 +142,16 @@ def clean_all(
     if not isinstance(text, str):
         raise TypeError(f"Expected str, got {type(text).__name__}")
 
-    if remove_tashkeel_flag:
-        text = remove_tashkeel(text)
-    if remove_tatweel_flag:
-        text = remove_tatweel(text)
-    if remove_html_flag:
-        text = remove_html_and_links(text)
-    if remove_repeated_flag:
-        text = remove_repeated_chars(text, max_repeat=max_repeat)
-    return text
+    try:
+        if remove_tashkeel_flag:
+            text = remove_tashkeel(text)
+        if remove_tatweel_flag:
+            text = remove_tatweel(text)
+        if remove_html_flag:
+            text = remove_html_and_links(text)
+        if remove_repeated_flag:
+            text = remove_repeated_chars(text, max_repeat=max_repeat)
+        return text
+    except Exception:
+        logger.warning("clean_all failed, returning original text")
+        return text

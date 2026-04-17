@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 
+from sahlnlp.utils.logger import logger
 from sahlnlp.utils.constants import (
     RE_AR_NAME_THEOPHORIC,
     RE_AR_NAME_TITLED,
@@ -76,43 +77,44 @@ def mask_sensitive_info(
     if mode not in ("tag", "mask"):
         raise ValueError(f"mode must be 'tag' or 'mask', got '{mode}'")
 
-    # Order matters: IBAN first (most specific), then phone, ID, email, names
-    # to avoid partial overlaps.
+    original = text
+    try:
+        def _replace_iban(m: re.Match) -> str:
+            return "[IBAN]" if mode == "tag" else _mask_preserve(m.group(), mask_char, 2, 2)
 
-    # 1. IBAN
-    def _replace_iban(m: re.Match) -> str:
-        return "[IBAN]" if mode == "tag" else _mask_preserve(m.group(), mask_char, 2, 2)
+        text = RE_SA_IBAN.sub(_replace_iban, text)
 
-    text = RE_SA_IBAN.sub(_replace_iban, text)
+        # 2. Phone numbers
+        def _replace_phone(m: re.Match) -> str:
+            return "[PHONE]" if mode == "tag" else _mask_preserve(m.group(), mask_char, 2, 3)
 
-    # 2. Phone numbers
-    def _replace_phone(m: re.Match) -> str:
-        return "[PHONE]" if mode == "tag" else _mask_preserve(m.group(), mask_char, 2, 3)
+        text = RE_SA_PHONE.sub(_replace_phone, text)
 
-    text = RE_SA_PHONE.sub(_replace_phone, text)
+        # 3. National ID
+        def _replace_id(m: re.Match) -> str:
+            return "[ID]" if mode == "tag" else _mask_preserve(m.group(), mask_char, 1, 2)
 
-    # 3. National ID
-    def _replace_id(m: re.Match) -> str:
-        return "[ID]" if mode == "tag" else _mask_preserve(m.group(), mask_char, 1, 2)
+        text = RE_SA_ID.sub(_replace_id, text)
 
-    text = RE_SA_ID.sub(_replace_id, text)
+        # 4. Email
+        def _replace_email(m: re.Match) -> str:
+            return "[EMAIL]" if mode == "tag" else _mask_preserve(m.group(), mask_char, 2, 4)
 
-    # 4. Email
-    def _replace_email(m: re.Match) -> str:
-        return "[EMAIL]" if mode == "tag" else _mask_preserve(m.group(), mask_char, 2, 4)
+        text = RE_EMAIL.sub(_replace_email, text)
 
-    text = RE_EMAIL.sub(_replace_email, text)
+        # 5. Arabic names — titled names first (highest confidence)
+        def _replace_titled_name(m: re.Match) -> str:
+            return "[NAME]" if mode == "tag" else mask_char * len(m.group())
 
-    # 5. Arabic names — titled names first (highest confidence)
-    def _replace_titled_name(m: re.Match) -> str:
-        return "[NAME]" if mode == "tag" else mask_char * len(m.group())
+        text = RE_AR_NAME_TITLED.sub(_replace_titled_name, text)
 
-    text = RE_AR_NAME_TITLED.sub(_replace_titled_name, text)
+        # 6. Arabic names — theophoric/patronymic (عبد X, بن X)
+        def _replace_theo_name(m: re.Match) -> str:
+            return "[NAME]" if mode == "tag" else mask_char * len(m.group())
 
-    # 6. Arabic names — theophoric/patronymic (عبد X, بن X)
-    def _replace_theo_name(m: re.Match) -> str:
-        return "[NAME]" if mode == "tag" else mask_char * len(m.group())
+        text = RE_AR_NAME_THEOPHORIC.sub(_replace_theo_name, text)
 
-    text = RE_AR_NAME_THEOPHORIC.sub(_replace_theo_name, text)
-
-    return text
+        return text
+    except Exception:
+        logger.warning("mask_sensitive_info failed, returning original text")
+        return original

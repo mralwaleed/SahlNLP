@@ -11,6 +11,7 @@ import math
 import re
 from collections import Counter
 
+from sahlnlp.utils.logger import logger
 from sahlnlp.utils.dictionaries import (
     ALL_DIALECTS,
     KEYBOARD_NEIGHBORS,
@@ -51,27 +52,32 @@ def detect_dialect(text: str) -> dict[str, float]:
     if not isinstance(text, str):
         raise TypeError(f"Expected str, got {type(text).__name__}")
 
-    tokens = _tokenize(text)
+    try:
+        tokens = _tokenize(text)
 
-    scores: dict[str, float] = {name: 0.0 for name in ALL_DIALECTS}
+        scores: dict[str, float] = {name: 0.0 for name in ALL_DIALECTS}
 
-    # Also check bigrams (2-word phrases) for multi-word markers
-    bigrams = [f"{tokens[i]} {tokens[i+1]}" for i in range(len(tokens) - 1)]
-    search_tokens = tokens + bigrams
+        # Also check bigrams (2-word phrases) for multi-word markers
+        bigrams = [f"{tokens[i]} {tokens[i+1]}" for i in range(len(tokens) - 1)]
+        search_tokens = tokens + bigrams
 
-    for token in search_tokens:
-        for dialect_name, dialect_dict in ALL_DIALECTS.items():
-            if token in dialect_dict:
-                scores[dialect_name] += dialect_dict[token]
+        for token in search_tokens:
+            for dialect_name, dialect_dict in ALL_DIALECTS.items():
+                if token in dialect_dict:
+                    scores[dialect_name] += dialect_dict[token]
 
-    total = sum(scores.values())
+        total = sum(scores.values())
 
-    if total == 0:
-        # No dialect markers found — return equal distribution
+        if total == 0:
+            # No dialect markers found — return equal distribution
+            equal = 1.0 / len(ALL_DIALECTS)
+            return {name: round(equal, 4) for name in ALL_DIALECTS}
+
+        return {name: round(score / total, 4) for name, score in scores.items()}
+    except Exception:
+        logger.warning("detect_dialect failed, returning equal distribution")
         equal = 1.0 / len(ALL_DIALECTS)
         return {name: round(equal, 4) for name in ALL_DIALECTS}
-
-    return {name: round(score / total, 4) for name, score in scores.items()}
 
 
 # ---------------------------------------------------------------------------
@@ -152,42 +158,46 @@ def extract_keywords(text: str, top_n: int = 5) -> list[tuple[str, float]]:
     if top_n < 1:
         raise ValueError("top_n must be >= 1")
 
-    # Split into pseudo-documents
-    raw_docs = _split_documents(text)
-    if not raw_docs:
+    try:
+        # Split into pseudo-documents
+        raw_docs = _split_documents(text)
+        if not raw_docs:
+            return []
+
+        # Tokenize each document and filter stop-words
+        tokenized_docs: list[list[str]] = []
+        all_tokens: list[str] = []
+
+        for doc in raw_docs:
+            tokens = _tokenize(doc)
+            filtered = [t for t in tokens if t not in STOP_WORDS]
+            if filtered:
+                tokenized_docs.append(filtered)
+                all_tokens.extend(filtered)
+
+        if not all_tokens:
+            return []
+
+        # Compute TF over the entire text
+        tf = compute_tf(all_tokens)
+
+        # Compute IDF across pseudo-documents
+        idf = compute_idf(tokenized_docs)
+
+        # Compute TF-IDF
+        tfidf = {
+            term: tf[term] * idf.get(term, 0.0)
+            for term in tf
+            if term in idf
+        }
+
+        # Sort by score descending, then alphabetically for ties
+        ranked = sorted(tfidf.items(), key=lambda x: (-x[1], x[0]))
+
+        return ranked[:top_n]
+    except Exception:
+        logger.warning("extract_keywords failed, returning empty list")
         return []
-
-    # Tokenize each document and filter stop-words
-    tokenized_docs: list[list[str]] = []
-    all_tokens: list[str] = []
-
-    for doc in raw_docs:
-        tokens = _tokenize(doc)
-        filtered = [t for t in tokens if t not in STOP_WORDS]
-        if filtered:
-            tokenized_docs.append(filtered)
-            all_tokens.extend(filtered)
-
-    if not all_tokens:
-        return []
-
-    # Compute TF over the entire text
-    tf = compute_tf(all_tokens)
-
-    # Compute IDF across pseudo-documents
-    idf = compute_idf(tokenized_docs)
-
-    # Compute TF-IDF
-    tfidf = {
-        term: tf[term] * idf.get(term, 0.0)
-        for term in tf
-        if term in idf
-    }
-
-    # Sort by score descending, then alphabetically for ties
-    ranked = sorted(tfidf.items(), key=lambda x: (-x[1], x[0]))
-
-    return ranked[:top_n]
 
 
 # ---------------------------------------------------------------------------

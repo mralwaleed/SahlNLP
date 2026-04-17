@@ -14,13 +14,11 @@ from sahlnlp.utils.constants import (
     TAA_MARBUTA,
     YAA,
 )
+from sahlnlp.utils.logger import logger
 
 
 def normalize_hamza(text: str) -> str:
     """Normalize all Alef variations to a bare Alef (ا).
-
-    Converts أ (Alef with hamza above), إ (Alef with hamza below),
-    and آ (Alef with madda) to plain ا (Alef).
 
     Args:
         text: The input Arabic text.
@@ -34,7 +32,11 @@ def normalize_hamza(text: str) -> str:
     """
     if not isinstance(text, str):
         raise TypeError(f"Expected str, got {type(text).__name__}")
-    return text.translate(str.maketrans({v: ALEF for v in ALEF_VARIANTS}))
+    try:
+        return text.translate(str.maketrans({v: ALEF for v in ALEF_VARIANTS}))
+    except Exception:
+        logger.warning("Failed to normalize hamza, returning original text")
+        return text
 
 
 def normalize_taa(text: str, to_haa: bool = True) -> str:
@@ -43,7 +45,6 @@ def normalize_taa(text: str, to_haa: bool = True) -> str:
     Args:
         text: The input Arabic text.
         to_haa: If True, convert ة to ه. If False, convert ه to ة.
-            Defaults to True.
 
     Returns:
         Text with Taa/Haa normalized.
@@ -51,14 +52,16 @@ def normalize_taa(text: str, to_haa: bool = True) -> str:
     Examples:
         >>> normalize_taa("مدرسة")
         'مدرسه'
-        >>> normalize_taa("مدرسه", to_haa=False)
-        'مدرسة'
     """
     if not isinstance(text, str):
         raise TypeError(f"Expected str, got {type(text).__name__}")
-    if to_haa:
-        return text.replace(TAA_MARBUTA, HAA)
-    return text.replace(HAA, TAA_MARBUTA)
+    try:
+        if to_haa:
+            return text.replace(TAA_MARBUTA, HAA)
+        return text.replace(HAA, TAA_MARBUTA)
+    except Exception:
+        logger.warning("Failed to normalize taa, returning original text")
+        return text
 
 
 def normalize_yaa(text: str) -> str:
@@ -76,14 +79,15 @@ def normalize_yaa(text: str) -> str:
     """
     if not isinstance(text, str):
         raise TypeError(f"Expected str, got {type(text).__name__}")
-    return text.replace(ALEF_MAKSURA, YAA)
+    try:
+        return text.replace(ALEF_MAKSURA, YAA)
+    except Exception:
+        logger.warning("Failed to normalize yaa, returning original text")
+        return text
 
 
 def normalize_search(text: str) -> str:
     """Apply aggressive normalization for search engine indexing.
-
-    Combines hamza normalization, taa normalization (to haa),
-    yaa normalization, diacritics removal, and tatweel removal.
 
     Args:
         text: The input Arabic text.
@@ -97,11 +101,15 @@ def normalize_search(text: str) -> str:
     """
     if not isinstance(text, str):
         raise TypeError(f"Expected str, got {type(text).__name__}")
-    from sahlnlp.core.cleaner import remove_tashkeel, remove_tatweel
+    try:
+        from sahlnlp.core.cleaner import remove_tashkeel, remove_tatweel
 
-    text = remove_tashkeel(text)
-    text = remove_tatweel(text)
-    text = normalize_hamza(text)
-    text = normalize_taa(text, to_haa=True)
-    text = normalize_yaa(text)
-    return text
+        text = remove_tashkeel(text)
+        text = remove_tatweel(text)
+        text = normalize_hamza(text)
+        text = normalize_taa(text, to_haa=True)
+        text = normalize_yaa(text)
+        return text
+    except Exception:
+        logger.warning("normalize_search failed, returning original text")
+        return text
