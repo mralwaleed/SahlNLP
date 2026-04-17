@@ -11,13 +11,12 @@ import math
 import re
 from collections import Counter
 
-from sahlnlp.utils.logger import logger
 from sahlnlp.utils.dictionaries import (
     ALL_DIALECTS,
     KEYBOARD_NEIGHBORS,
     STOP_WORDS,
 )
-
+from sahlnlp.utils.logger import logger
 
 # ---------------------------------------------------------------------------
 # Feature 1: Dialect Radar
@@ -35,8 +34,14 @@ def _tokenize(text: str) -> list[str]:
 def detect_dialect(text: str) -> dict[str, float]:
     """Detect the most likely Arabic dialect in the text using weighted lexicons.
 
-    Tokenizes the input, cross-references each token against dialect dictionaries,
-    tallies weighted scores, and returns normalized percentages.
+    Tokenizes the input, generates bigrams, cross-references each token and
+    bigram against dialect dictionaries with a 3-tier weight system (1, 5, 10),
+    then returns normalized confidence scores.
+
+    Weight tiers:
+      - **1**: Common words with weak dialect association
+      - **5**: Dialect-specific words
+      - **10**: Signature words and bigram boosts — unmistakable markers
 
     Args:
         text: The input Arabic text (any dialect).
@@ -277,7 +282,9 @@ def suggest_correction(
     if not isinstance(word, str):
         raise TypeError(f"Expected str for word, got {type(word).__name__}")
     if not isinstance(dictionary, list):
-        raise TypeError(f"Expected list for dictionary, got {type(dictionary).__name__}")
+        raise TypeError(
+            f"Expected list for dictionary, got {type(dictionary).__name__}"
+        )
     if not dictionary:
         raise ValueError("Dictionary cannot be empty")
 

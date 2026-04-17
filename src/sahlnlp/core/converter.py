@@ -7,7 +7,6 @@ with full Arabic grammar support: case (إعراب), dual forms, and currency.
 
 from __future__ import annotations
 
-from sahlnlp.utils.logger import logger
 from sahlnlp.utils.constants import (
     ARABIC_HUNDREDS_ACCUSATIVE,
     ARABIC_HUNDREDS_NOMINATIVE,
@@ -22,6 +21,7 @@ from sahlnlp.utils.constants import (
     RE_ARABIC_DIGITS,
     RE_INDIC_DIGITS,
 )
+from sahlnlp.utils.logger import logger
 
 _VALID_CASES = frozenset({'nominative', 'accusative', 'genitive'})
 

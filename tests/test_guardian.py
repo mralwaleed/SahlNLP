@@ -2,7 +2,7 @@
 
 import pytest
 
-from sahlnlp.core.guardian import mask_sensitive_info, _mask_preserve
+from sahlnlp.core.guardian import _mask_preserve, mask_sensitive_info
 
 
 # ===========================================================================

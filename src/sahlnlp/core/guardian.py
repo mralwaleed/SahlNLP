@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import re
 
-from sahlnlp.utils.logger import logger
 from sahlnlp.utils.constants import (
     RE_AR_NAME_THEOPHORIC,
     RE_AR_NAME_TITLED,
@@ -18,9 +17,15 @@ from sahlnlp.utils.constants import (
     RE_SA_ID,
     RE_SA_PHONE,
 )
+from sahlnlp.utils.logger import logger
 
 
-def _mask_preserve(text: str, mask_char: str = "*", keep_start: int = 2, keep_end: int = 3) -> str:
+def _mask_preserve(
+    text: str,
+    mask_char: str = "*",
+    keep_start: int = 2,
+    keep_end: int = 3,
+) -> str:
     """Mask the middle of a string, preserving start and end characters.
 
     Args:
@@ -80,25 +85,33 @@ def mask_sensitive_info(
     original = text
     try:
         def _replace_iban(m: re.Match) -> str:
-            return "[IBAN]" if mode == "tag" else _mask_preserve(m.group(), mask_char, 2, 2)
+            if mode == "tag":
+                return "[IBAN]"
+            return _mask_preserve(m.group(), mask_char, 2, 2)
 
         text = RE_SA_IBAN.sub(_replace_iban, text)
 
         # 2. Phone numbers
         def _replace_phone(m: re.Match) -> str:
-            return "[PHONE]" if mode == "tag" else _mask_preserve(m.group(), mask_char, 2, 3)
+            if mode == "tag":
+                return "[PHONE]"
+            return _mask_preserve(m.group(), mask_char, 2, 3)
 
         text = RE_SA_PHONE.sub(_replace_phone, text)
 
         # 3. National ID
         def _replace_id(m: re.Match) -> str:
-            return "[ID]" if mode == "tag" else _mask_preserve(m.group(), mask_char, 1, 2)
+            if mode == "tag":
+                return "[ID]"
+            return _mask_preserve(m.group(), mask_char, 1, 2)
 
         text = RE_SA_ID.sub(_replace_id, text)
 
         # 4. Email
         def _replace_email(m: re.Match) -> str:
-            return "[EMAIL]" if mode == "tag" else _mask_preserve(m.group(), mask_char, 2, 4)
+            if mode == "tag":
+                return "[EMAIL]"
+            return _mask_preserve(m.group(), mask_char, 2, 4)
 
         text = RE_EMAIL.sub(_replace_email, text)
 

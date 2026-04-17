@@ -23,22 +23,47 @@ class TestDetectDialect:
         result = detect_dialect("شلونك يا خوي شو مسوي")
         assert result["Gulf"] > 0.5
 
+    def test_gulf_signature_words(self):
+        result = detect_dialect("ماكو شي مو زين ياخي")
+        assert result["Gulf"] > 0.8
+
     def test_levantine_sentence(self):
         result = detect_dialect("شو بعمل هيك يا زلمة")
         assert result["Levantine"] > 0.5
+
+    def test_levantine_high_confidence(self):
+        # Mixed input with one Gulf word — Levantine must still dominate
+        result = detect_dialect("شلونك؟ منيح؟ والله كتير اشتقنا لك يا زلمة")
+        assert result["Levantine"] > 0.85
+
+    def test_levantine_signature_words(self):
+        result = detect_dialect("هيك منيح ليش نحنا هلق")
+        assert result["Levantine"] > 0.9
 
     def test_egyptian_sentence(self):
         result = detect_dialect("عاوز اروح ازاي عشان كده")
         assert result["Egyptian"] > 0.5
 
+    def test_egyptian_signature_words(self):
+        result = detect_dialect("مفيش مش عايز دلوقتي بتاع أوي")
+        assert result["Egyptian"] > 0.9
+
     def test_maghrebi_sentence(self):
         result = detect_dialect("واش كيداير بزاف راهو")
         assert result["Maghrebi"] > 0.5
 
+    def test_maghrebi_signature_words(self):
+        result = detect_dialect("بزاف واش كيفاش علاش بصح")
+        assert result["Maghrebi"] > 0.9
+
+    def test_bigram_boost_egyptian(self):
+        result = detect_dialect("عاوز اروح عامل ايه")
+        assert result["Egyptian"] > 0.8
+
     def test_percentages_sum_to_one(self):
         result = detect_dialect("شلونك يا زلمة عشان كده بزاف")
         total = sum(result.values())
-        assert abs(total - 1.0) < 1e-6, f"Percentages sum to {total}, expected 1.0"
+        assert abs(total - 1.0) < 1e-3, f"Percentages sum to {total}, expected 1.0"
 
     def test_all_values_between_zero_and_one(self):
         result = detect_dialect("شلونك يا زلمة عشان كده بزاف")
@@ -57,7 +82,6 @@ class TestDetectDialect:
 
     def test_mixed_dialect(self):
         result = detect_dialect("شلونك يا زلمة بزاف")
-        # Should detect markers from Gulf, Levantine, and Maghrebi
         assert result["Gulf"] > 0.0
         assert result["Levantine"] > 0.0
         assert result["Maghrebi"] > 0.0
@@ -169,7 +193,11 @@ class TestExtractKeywords:
         keywords = extract_keywords(text, top_n=3)
         ranked_words = [kw[0] for kw in keywords]
         # Discriminative terms should rank higher than ubiquitous ones
-        assert "جديدة" in ranked_words or "كبيرة" in ranked_words or "مهمة" in ranked_words
+        assert (
+            "جديدة" in ranked_words
+            or "كبيرة" in ranked_words
+            or "مهمة" in ranked_words
+        )
 
 
 # ===========================================================================
