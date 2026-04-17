@@ -13,6 +13,7 @@ from sahlnlp.utils.constants import (
     ARABIC_HUNDREDS_NOMINATIVE,
     ARABIC_ONES,
     ARABIC_SCALE_ACCUSATIVE,
+    ARABIC_SCALE_GENITIVE,
     ARABIC_SCALE_NOMINATIVE,
     ARABIC_TENS_ACCUSATIVE,
     ARABIC_TENS_NOMINATIVE,
@@ -23,6 +24,26 @@ from sahlnlp.utils.constants import (
 )
 
 _VALID_CASES = frozenset({'nominative', 'accusative', 'genitive'})
+
+
+# ---------------------------------------------------------------------------
+# Case-aware lookup helpers
+# ---------------------------------------------------------------------------
+
+def _inflect_ones(n: int, case: str) -> str:
+    """Return the word for number *n* (0-19) inflected for grammatical case.
+
+    Only 2 and 12 change with case:
+      - 2: اثنان (nom) / اثنين (acc, gen)
+      - 12: اثنا عشر (nom) / اثني عشر (acc, gen)
+    All other ones (including 11: أحد عشر) are invariable.
+    """
+    if case != 'nominative':
+        if n == 2:
+            return 'اثنين'
+        if n == 12:
+            return 'اثني عشر'
+    return ARABIC_ONES[n]
 
 
 def _get_tens(case: str) -> dict:
@@ -40,8 +61,14 @@ def _get_hundreds(case: str) -> dict:
 def _get_scale(case: str) -> dict:
     if case == 'nominative':
         return ARABIC_SCALE_NOMINATIVE
+    if case == 'genitive':
+        return ARABIC_SCALE_GENITIVE
     return ARABIC_SCALE_ACCUSATIVE
 
+
+# ---------------------------------------------------------------------------
+# Digit conversion (Indic ↔ Arabic)
+# ---------------------------------------------------------------------------
 
 def indic_to_arabic(text: str) -> str:
     """Convert Arabic-Indic digits (٠١٢٣٤٥٦٧٨٩) to standard Arabic numerals (0-9).
@@ -87,6 +114,10 @@ def arabic_to_indic(text: str) -> str:
         return text
 
 
+# ---------------------------------------------------------------------------
+# Core number-to-words
+# ---------------------------------------------------------------------------
+
 def _convert_below_1000(n: int, case: str = 'nominative') -> str:
     """Convert an integer 0-999 to Arabic words with grammatical case."""
     if n == 0:
@@ -107,14 +138,14 @@ def _convert_below_1000(n: int, case: str = 'nominative') -> str:
         return " ".join(parts)
 
     if remainder < 20:
-        parts.append(ARABIC_ONES[remainder])
+        parts.append(_inflect_ones(remainder, case))
     else:
         tens_val = remainder // 10
         ones_val = remainder % 10
         if ones_val == 0:
             parts.append(tens_map[tens_val])
         else:
-            parts.append(f"{ARABIC_ONES[ones_val]} و{tens_map[tens_val]}")
+            parts.append(f"{_inflect_ones(ones_val, case)} و{tens_map[tens_val]}")
 
     return " و".join(parts)
 
@@ -190,7 +221,7 @@ def tafkeet(
         return ARABIC_ONES[0]
 
     if number < 20:
-        result = ARABIC_ONES[number]
+        result = _inflect_ones(number, case)
         if currency == 'SAR':
             return f"{result} ريالاً"
         return result
@@ -203,7 +234,7 @@ def tafkeet(
         if ones_val == 0:
             result = tens_map[tens_val]
         else:
-            result = f"{ARABIC_ONES[ones_val]} و{tens_map[tens_val]}"
+            result = f"{_inflect_ones(ones_val, case)} و{tens_map[tens_val]}"
         if currency == 'SAR':
             return f"{result} ريالاً"
         return result
@@ -217,7 +248,10 @@ def tafkeet(
 
     # Large numbers: process in groups of 3 digits
     scale_map = _get_scale(case)
-    tens_map = _get_tens(case)
+    nom_singular = {
+        idx: ARABIC_SCALE_NOMINATIVE[idx][0]
+        for idx in ARABIC_SCALE_NOMINATIVE
+    }
 
     groups: list[tuple[int, int]] = []  # (value, scale_index)
     remaining = number
@@ -230,29 +264,36 @@ def tafkeet(
         scale_idx += 1
 
     parts: list[str] = []
-    for group_val, scale_idx in reversed(groups):
-        if scale_idx == 0:
+    for group_val, sidx in reversed(groups):
+        if sidx == 0:
+            # Base group (ones): just spell out
             parts.append(_convert_below_1000(group_val, case))
-        else:
-            singular, dual, plural = scale_map[scale_idx]
-            nom_singular = ARABIC_SCALE_NOMINATIVE[scale_idx][0]
+            continue
 
-            if group_val == 1:
-                parts.append(singular)
-            elif group_val == 2:
-                parts.append(dual)
-            elif 3 <= group_val <= 10:
-                # 3-10: plural form (آلاف, ملايين) — number precedes scale
-                group_text = _convert_below_1000(group_val, case)
-                parts.append(f"{group_text} {plural}")
-            elif 11 <= group_val <= 99:
-                # 11-99: singular accusative with tanween (ألفاً, مليوناً)
-                group_acc = _convert_below_1000(group_val, 'accusative')
-                parts.append(f"{group_acc} {nom_singular}اً")
+        singular, dual, plural = scale_map[sidx]
+
+        if group_val == 1:
+            parts.append(singular)
+        elif group_val == 2:
+            parts.append(dual)
+        elif 3 <= group_val <= 10:
+            # 3-10: plural form (آلاف, ملايين) — number precedes scale
+            group_text = _convert_below_1000(group_val, case)
+            parts.append(f"{group_text} {plural}")
+        elif 11 <= group_val <= 99:
+            # 11-99: singular accusative (tamyez) — always ألفاً
+            group_acc = _convert_below_1000(group_val, 'accusative')
+            parts.append(f"{group_acc} {nom_singular[sidx]}اً")
+        else:
+            # 100-999: scale word form depends on the remainder
+            group_text = _convert_below_1000(group_val, case)
+            remainder = group_val % 100
+            if remainder >= 11:
+                # Teens/tens: scale word is tamyez → always accusative
+                parts.append(f"{group_text} {nom_singular[sidx]}اً")
             else:
-                # 100+: singular accusative with tanween
-                group_text = _convert_below_1000(group_val, case)
-                parts.append(f"{group_text} {nom_singular}اً")
+                # Clean hundred or remainder 1-10: singular, no tanween
+                parts.append(f"{group_text} {singular}")
 
     result = " و".join(parts)
 

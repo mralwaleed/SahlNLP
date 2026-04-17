@@ -202,6 +202,13 @@ ARABIC_SCALE_ACCUSATIVE = {
     4: ('تريليوناً', 'تريليونين', 'تريليونات'),
 }
 
+ARABIC_SCALE_GENITIVE = {
+    1: ('ألف', 'ألفين', 'آلاف'),
+    2: ('مليون', 'مليونين', 'ملايين'),
+    3: ('مليار', 'مليارين', 'مليارات'),
+    4: ('تريليون', 'تريليونين', 'تريليونات'),
+}
+
 # Backward-compatible default (nominative)
 ARABIC_SCALE = ARABIC_SCALE_NOMINATIVE
 
