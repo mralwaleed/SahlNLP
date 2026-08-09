@@ -1,0 +1,18 @@
+{
+  "best": "NaiveBayes",
+  "nb": {
+    "accuracy": 0.6552,
+    "f1": 0.649
+  },
+  "lr": {
+    "accuracy": 0.6552,
+    "f1": 0.5937
+  },
+  "nn": {
+    "accuracy": 0.5517,
+    "f1": 0.4818
+  },
+  "train_size": 114,
+  "test_size": 29,
+  "vocab_size": 250
+}

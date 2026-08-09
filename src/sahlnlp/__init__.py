@@ -40,6 +40,12 @@ from sahlnlp.core.analyzer import (
     extract_keywords,
     suggest_correction,
 )
+from sahlnlp.core.ml import (
+    LogisticRegressionClassifier,
+    NaiveBayesClassifier,
+    extract_features,
+)
+from sahlnlp.core.sentiment import analyze_sentiment
 from sahlnlp.core.cleaner import (
     clean_all,
     remove_html_and_links,
@@ -80,4 +86,10 @@ __all__ = [
     "compute_idf",
     # Guardian (PII)
     "mask_sensitive_info",
+    # ML
+    "NaiveBayesClassifier",
+    "LogisticRegressionClassifier",
+    "extract_features",
+    # Sentiment
+    "analyze_sentiment",
 ]
