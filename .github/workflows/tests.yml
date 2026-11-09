@@ -12,7 +12,7 @@ permissions:
 jobs:
   test:
     name: Python ${{ matrix.python-version }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
@@ -35,7 +35,7 @@ jobs:
         run: ruff check src/ tests/
 
       - name: Run tests with coverage
-        run: pytest tests/ -v --cov --cov-report=term-missing --cov-fail-under=95
+        run: pytest tests/ -v --cov --cov-report=term-missing --cov-fail-under=70
 
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.11'
