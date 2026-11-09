@@ -510,6 +510,39 @@ pip install -e ".[dev]"
 pytest tests/ -v
 ```
 
+### Arabic corpus cleaning
+
+Clean lines before adding them to a language-model training corpus. The result
+keeps source indices and explains each cleaning or rejection decision:
+
+```python
+import sahlnlp
+
+result = sahlnlp.clean_corpus(texts)
+training_texts = [row["text"] for row in result["cleaned"]]
+rejected_rows = result["rejected"]
+```
+
+By default, the cleaner tests each text transformation against the corpus
+dialect profile and confident per-line dialect predictions before applying it.
+It removes tashkeel, tatweel, HTML and links, collapses whitespace, and reduces
+repeated-character flooding only when the measured drift stays within
+`max_dialect_drift` (default `0.08`). Otherwise it skips that operation and
+reports why. It then filters short or mostly non-Arabic lines and removes exact
+duplicates. The report includes each operation's measured distribution shift,
+confident-label flip rate, before/after dialect profile, and any final drift
+caused by filtering or deduplication. Per-line output includes a predicted
+dialect.
+
+Set `remove_links=False` to preserve URLs, `deduplicate=False` to keep repeated
+lines, or `reduce_repeated_chars=False` to skip flooding reduction. Adjust
+`min_words`, `min_arabic_ratio`, and `max_dialect_drift` for the corpus you are
+preparing. Dialect profiles are estimates from Sahl's bundled classifier, so
+review them against your own labeled sample before using them as a strict
+linguistic guarantee. Run `python benchmarks/corpus_dialect_preservation.py` for
+a reproducible smoke test on bundled labeled examples with synthetic noise.
+It does not measure real-world corpus quality or downstream model gains.
+
 ---
 
 ### Security & Privacy — PII Masking (`sahlnlp.guardian`)

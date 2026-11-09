@@ -46,6 +46,7 @@ from sahlnlp.core.ml import (
     extract_features,
 )
 from sahlnlp.core.sentiment import analyze_sentiment
+from sahlnlp.core.corpus import clean_corpus
 from sahlnlp.core.cleaner import (
     clean_all,
     remove_html_and_links,
@@ -92,4 +93,5 @@ __all__ = [
     "extract_features",
     # Sentiment
     "analyze_sentiment",
+    "clean_corpus",
 ]
