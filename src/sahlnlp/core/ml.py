@@ -70,7 +70,11 @@ class NaiveBayesClassifier:
         V = len(self.vocab)
         log_probs: dict[str, float] = {}
         for c in self.classes:
-            lp = math.log(self.class_doc_counts[c] / self.total_docs) if self.total_docs else 0.0
+            lp = (
+                math.log(self.class_doc_counts[c] / self.total_docs)
+                if self.total_docs
+                else 0.0
+            )
             denom = self.class_total[c] + V
             for f, cnt in feats.items():
                 fc = self.class_feature_counts[c].get(f, 0)
@@ -86,7 +90,10 @@ class NaiveBayesClassifier:
         data = {
             "classes": self.classes,
             "class_doc_counts": self.class_doc_counts,
-            "class_feature_counts": {c: dict(self.class_feature_counts[c]) for c in self.classes},
+            "class_feature_counts": {
+                class_name: dict(self.class_feature_counts[class_name])
+                for class_name in self.classes
+            },
             "class_total": self.class_total,
             "vocab": sorted(self.vocab),
             "total_docs": self.total_docs,
@@ -98,7 +105,10 @@ class NaiveBayesClassifier:
         data = json.loads(Path(path).read_text(encoding="utf-8"))
         clf = cls(data["classes"])
         clf.class_doc_counts = data["class_doc_counts"]
-        clf.class_feature_counts = {c: Counter(data["class_feature_counts"][c]) for c in data["classes"]}
+        clf.class_feature_counts = {
+            class_name: Counter(data["class_feature_counts"][class_name])
+            for class_name in data["classes"]
+        }
         clf.class_total = data["class_total"]
         clf.vocab = set(data["vocab"])
         clf.total_docs = data["total_docs"]
@@ -114,7 +124,13 @@ class LogisticRegressionClassifier:
     L2 regularisation prevents overfitting on small corpora.
     """
 
-    def __init__(self, classes: list[str], lr: float = 0.5, iterations: int = 150, l2: float = 0.01):
+    def __init__(
+        self,
+        classes: list[str],
+        lr: float = 0.5,
+        iterations: int = 150,
+        l2: float = 0.01,
+    ):
         self.classes = classes
         self.lr = lr
         self.iterations = iterations
@@ -123,7 +139,7 @@ class LogisticRegressionClassifier:
         self.bias: dict[str, float] = {c: 0.0 for c in classes}
 
     def train(self, samples: list[tuple[str, str]]) -> None:
-        feats_list = [(extract_features(t), l) for t, l in samples]
+        feats_list = [(extract_features(text), label) for text, label in samples]
         n = len(feats_list)
         for _it in range(self.iterations):
             grad_w: dict[str, dict[str, float]] = {c: {} for c in self.classes}
@@ -152,7 +168,9 @@ class LogisticRegressionClassifier:
             for c in self.classes:
                 wc = self.weights[c]
                 for f, g in grad_w[c].items():
-                    wc[f] = wc.get(f, 0.0) - self.lr * (g * inv_n + self.l2 * wc.get(f, 0.0))
+                    wc[f] = wc.get(f, 0.0) - self.lr * (
+                        g * inv_n + self.l2 * wc.get(f, 0.0)
+                    )
                 self.bias[c] -= self.lr * grad_b[c] * inv_n
 
     def predict(self, text: str) -> dict[str, float]:
@@ -212,7 +230,11 @@ def evaluate(
         p = tp[c] / (tp[c] + fp[c]) if (tp[c] + fp[c]) else 0.0
         r = tp[c] / (tp[c] + fn[c]) if (tp[c] + fn[c]) else 0.0
         f1 = 2 * p * r / (p + r) if (p + r) else 0.0
-        per_class[c] = {"precision": round(p, 4), "recall": round(r, 4), "f1": round(f1, 4)}
+        per_class[c] = {
+            "precision": round(p, 4),
+            "recall": round(r, 4),
+            "f1": round(f1, 4),
+        }
     metrics["per_class"] = per_class
     macro_f1 = sum(v["f1"] for v in per_class.values()) / len(classes)
     metrics["macro_f1"] = round(macro_f1, 4)
@@ -313,7 +335,10 @@ class NeuralNetworkClassifier:
     # ── train ── #
     def train(self, samples: list[tuple[str, str]]) -> None:
         n = len(samples)
-        feats_list = [(self._featurize(t), self.classes.index(l)) for t, l in samples]
+        feats_list = [
+            (self._featurize(text), self.classes.index(label))
+            for text, label in samples
+        ]
         for _ in range(self.iterations):
             dW2 = [[0.0] * self.output_size for _ in range(self.hidden)]
             db2 = [0.0] * self.output_size

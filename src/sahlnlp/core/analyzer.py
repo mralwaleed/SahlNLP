@@ -8,18 +8,17 @@ Provides dialect detection, keyword extraction (TF-IDF), and fuzzy matching
 from __future__ import annotations
 
 import math
+import os
 import re
 from collections import Counter
 
+from sahlnlp.core.ml import NaiveBayesClassifier
 from sahlnlp.utils.dictionaries import (
     ALL_DIALECTS,
     KEYBOARD_NEIGHBORS,
     STOP_WORDS,
 )
 from sahlnlp.utils.logger import logger
-import os
-
-from sahlnlp.core.ml import NaiveBayesClassifier
 
 # ---------------------------------------------------------------------------
 # Feature 1: Dialect Radar

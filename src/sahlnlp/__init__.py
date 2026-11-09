@@ -31,7 +31,7 @@ Quick Start::
     sahlnlp.mask_sensitive_info("اتصل على 0551234567", mode="tag")
 """
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 
 from sahlnlp.core.analyzer import (
     compute_idf,
@@ -40,12 +40,6 @@ from sahlnlp.core.analyzer import (
     extract_keywords,
     suggest_correction,
 )
-from sahlnlp.core.ml import (
-    LogisticRegressionClassifier,
-    NaiveBayesClassifier,
-    extract_features,
-)
-from sahlnlp.core.sentiment import analyze_sentiment
 from sahlnlp.core.cleaner import (
     clean_all,
     remove_html_and_links,
@@ -54,13 +48,20 @@ from sahlnlp.core.cleaner import (
     remove_tatweel,
 )
 from sahlnlp.core.converter import arabic_to_indic, indic_to_arabic, tafkeet
+from sahlnlp.core.corpus import clean_corpus
 from sahlnlp.core.guardian import mask_sensitive_info
+from sahlnlp.core.ml import (
+    LogisticRegressionClassifier,
+    NaiveBayesClassifier,
+    extract_features,
+)
 from sahlnlp.core.normalizer import (
     normalize_hamza,
     normalize_search,
     normalize_taa,
     normalize_yaa,
 )
+from sahlnlp.core.sentiment import analyze_sentiment
 
 __all__ = [
     # Cleaner
@@ -92,4 +93,5 @@ __all__ = [
     "extract_features",
     # Sentiment
     "analyze_sentiment",
+    "clean_corpus",
 ]
