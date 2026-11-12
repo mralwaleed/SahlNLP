@@ -11,11 +11,9 @@ import math
 import re
 from collections import Counter
 
-from sahlnlp.utils.dictionaries import (
-    KEYBOARD_NEIGHBORS,
-    STOP_WORDS,
-)
+from sahlnlp.utils.dictionaries import KEYBOARD_NEIGHBORS, STOP_WORDS
 from sahlnlp.utils.logger import logger
+
 
 def _tokenize(text: str) -> list[str]:
     """Simple whitespace + punctuation tokenizer."""
