@@ -1,28 +1,21 @@
 """
 Advanced Arabic text analysis algorithms.
 
-Provides dialect detection, keyword extraction (TF-IDF), and fuzzy matching
+Provides keyword extraction (TF-IDF) and fuzzy matching
 (Levenshtein distance) — all built from scratch with zero external dependencies.
 """
 
 from __future__ import annotations
 
 import math
-import os
 import re
 from collections import Counter
 
-from sahlnlp.core.ml import NaiveBayesClassifier
 from sahlnlp.utils.dictionaries import (
-    ALL_DIALECTS,
     KEYBOARD_NEIGHBORS,
     STOP_WORDS,
 )
 from sahlnlp.utils.logger import logger
-
-# ---------------------------------------------------------------------------
-# Feature 1: Dialect Radar
-# ---------------------------------------------------------------------------
 
 def _tokenize(text: str) -> list[str]:
     """Simple whitespace + punctuation tokenizer."""
@@ -33,117 +26,8 @@ def _tokenize(text: str) -> list[str]:
     return [t for t in tokens if t]
 
 
-def _detect_dialect_lexicon(text: str) -> dict[str, float]:
-    """Detect the most likely Arabic dialect in the text using weighted lexicons.
-
-    Tokenizes the input, generates bigrams, cross-references each token and
-    bigram against dialect dictionaries with a 3-tier weight system (1, 5, 10),
-    then returns normalized confidence scores.
-
-    Weight tiers:
-      - **1**: Common words with weak dialect association
-      - **5**: Dialect-specific words
-      - **10**: Signature words and bigram boosts — unmistakable markers
-
-    Args:
-        text: The input Arabic text (any dialect).
-
-    Returns:
-        A dictionary mapping dialect names to likelihood percentages (0.0-1.0).
-        Values sum to 1.0. Returns equal distribution for text with no markers.
-
-    Examples:
-        >>> detect_dialect("شلونك يا خوي")
-        {'Gulf': 1.0, 'Levantine': 0.0, 'Egyptian': 0.0, 'Maghrebi': 0.0}
-    """
-    if not isinstance(text, str):
-        raise TypeError(f"Expected str, got {type(text).__name__}")
-
-    try:
-        tokens = _tokenize(text)
-
-        scores: dict[str, float] = {name: 0.0 for name in ALL_DIALECTS}
-
-        # Also check bigrams (2-word phrases) for multi-word markers
-        bigrams = [f"{tokens[i]} {tokens[i+1]}" for i in range(len(tokens) - 1)]
-        search_tokens = tokens + bigrams
-
-        for token in search_tokens:
-            for dialect_name, dialect_dict in ALL_DIALECTS.items():
-                if token in dialect_dict:
-                    scores[dialect_name] += dialect_dict[token]
-
-        total = sum(scores.values())
-
-        if total == 0:
-            # No dialect markers found — return equal distribution
-            equal = 1.0 / len(ALL_DIALECTS)
-            return {name: round(equal, 4) for name in ALL_DIALECTS}
-
-        return {name: round(score / total, 4) for name, score in scores.items()}
-    except Exception:
-        logger.warning("detect_dialect failed, returning equal distribution")
-        equal = 1.0 / len(ALL_DIALECTS)
-        return {name: round(equal, 4) for name in ALL_DIALECTS}
-
-# --- ML dialect detection (Naive Bayes, pre-trained, zero-dependency) -------
-
-_NB_MODEL: NaiveBayesClassifier | None = None
-
-
-def _load_nb_model() -> NaiveBayesClassifier:
-    """Lazily load the bundled pre-trained Naive Bayes model."""
-    global _NB_MODEL
-    if _NB_MODEL is None:
-        _model_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "utils", "dialect_nb_model.json",
-        )
-        _NB_MODEL = NaiveBayesClassifier.load(_model_path)
-    return _NB_MODEL
-
-
-def detect_dialect(text: str) -> dict[str, float]:
-    """Detect the most likely Arabic dialect using a trained ML classifier.
-
-    A Multinomial Naive Bayes model trained on character n-gram features
-    (2–4) from a bundled dialect corpus. The model is shipped pre-trained
-    (learned weights in JSON) — no runtime training, zero external
-    dependencies, instant prediction.
-
-    Falls back to the weighted-lexicon approach if the model file is
-    unavailable (e.g., during development before training).
-
-    Accuracy: ~90% on held-out test data (4 dialects).
-
-    Args:
-        text: Arabic text (any dialect).
-
-    Returns:
-        ``{dialect: probability}`` — values sum to 1.0.
-
-    Examples:
-        >>> detect_dialect("شلونك يا خوي")
-        {'Egyptian': 0.0003, 'Gulf': 0.9988, 'Levantine': 0.0005, 'Maghrebi': 0.0004}
-    """
-    if not isinstance(text, str):
-        raise TypeError(f"Expected str, got {type(text).__name__}")
-
-    try:
-        model = _load_nb_model()
-        scores = model.predict(text)
-        # ensure all dialect keys present
-        for name in ALL_DIALECTS:
-            if name not in scores:
-                scores[name] = 0.0
-        return scores
-    except Exception:
-        logger.warning("ML model unavailable, falling back to lexicon")
-        return _detect_dialect_lexicon(text)
-
-
 # ---------------------------------------------------------------------------
-# Feature 2: TF-IDF Keyword Extractor
+# Feature 1: TF-IDF Keyword Extractor
 # ---------------------------------------------------------------------------
 
 def _split_documents(text: str) -> list[str]:
@@ -263,7 +147,7 @@ def extract_keywords(text: str, top_n: int = 5) -> list[tuple[str, float]]:
 
 
 # ---------------------------------------------------------------------------
-# Feature 3: Levenshtein Distance Fuzzy Matcher
+# Feature 2: Levenshtein Distance Fuzzy Matcher
 # ---------------------------------------------------------------------------
 
 def _levenshtein_distance(s1: str, s2: str, use_keyboard: bool = False) -> float:

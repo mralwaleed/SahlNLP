@@ -25,7 +25,7 @@ st.sidebar.title("⚡ SahlNLP")
 st.sidebar.caption(f"v{sahlnlp.__version__} — Zero-dependency Arabic NLP")
 page = st.sidebar.radio(
     "Navigate",
-    ["Home", "Text Cleaner", "Dialect Radar", "PII Masking (Guardian)", "Tafkeet"],
+    ["Home", "Text Cleaner", "PII Masking (Guardian)", "Tafkeet"],
     label_visibility="collapsed",
 )
 st.sidebar.divider()
@@ -59,7 +59,6 @@ if page == "Home":
         | Module | Description |
         |---|---|
         | 🧹 **Text Cleaner** | Remove Tashkeel, Tatweel, HTML/links, repeated chars |
-        | 📡 **Dialect Radar** | Detect Gulf, Levantine, Egyptian, Maghrebi |
         | 🛡️ **Guardian** | Mask or tag PII (phones, IDs, IBANs, emails, names) |
         | 🔢 **Tafkeet** | Convert numbers to Arabic words with full grammar |
 
@@ -95,40 +94,6 @@ elif page == "Text Cleaner":
             remove_repeated_flag=do_repeated,
         )
         st.success(result)
-        st.caption(f"Executed in **{ms:.4f} ms**")
-
-# ---------------------------------------------------------------------------
-# Dialect Radar
-# ---------------------------------------------------------------------------
-elif page == "Dialect Radar":
-    st.header("📡 Dialect Radar")
-    st.caption("Detect the Arabic dialect in real-time with confidence scores.")
-
-    sample_dialect = "شلونك يا خوي، وش أخبارك؟ الحمد لله اليوم زين"
-    text = st.text_area("Input Arabic text", value=sample_dialect, height=120)
-
-    if st.button("Detect Dialect", type="primary") and text.strip():
-        result, ms = timed(sahlnlp.detect_dialect, text)
-
-        # Sort by score descending
-        sorted_dialects = sorted(result.items(), key=lambda x: x[1], reverse=True)
-        top_dialect, top_score = sorted_dialects[0]
-
-        # Confidence badge
-        st.metric("Detected Dialect", top_dialect, f"{top_score:.0%}")
-
-        # Bar chart for all dialects
-        labels = [d for d, _ in sorted_dialects]
-        scores = [s for _, s in sorted_dialects]
-        chart_data = {"Dialect": labels, "Confidence": scores}
-        st.bar_chart(chart_data, x="Dialect", y="Confidence", horizontal=True)
-
-        # Detail table
-        st.dataframe(
-            [{"Dialect": d, "Confidence": f"{s:.2%}"} for d, s in sorted_dialects],
-            hide_index=True,
-            use_container_width=True,
-        )
         st.caption(f"Executed in **{ms:.4f} ms**")
 
 # ---------------------------------------------------------------------------

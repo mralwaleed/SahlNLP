@@ -1,17 +1,13 @@
 """
-Zero-dependency Arabic dialect classification — real machine learning,
-implemented entirely in pure Python (no numpy / sklearn / torch).
+Zero-dependency text classification utilities implemented entirely in pure
+Python (no numpy / sklearn / torch).
 
 Two classifiers:
   - **Multinomial Naive Bayes** (closed-form, probabilistic, fast).
   - **Multinomial Logistic Regression** (softmax + gradient descent).
 
-Features: character n-grams (2–4) capture sub-word dialectal patterns —
-verb endings, prefixes, pronouns, particles — that distinguish dialects.
-
-The model is trained offline on a bundled corpus (utils/dialect_corpus.py)
-and the learned weights are shipped as data, keeping import instant and
-the library dependency-free.
+These classifiers support lightweight local classification tasks while
+keeping the library dependency-free.
 """
 
 from __future__ import annotations

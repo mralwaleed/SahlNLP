@@ -26,7 +26,6 @@ SAMPLE_PII = (
     "السيد أحمد محمد رقمه 0551234567 وهويته 1234567890 "
     "والآيبان SA0380000000608010167519 والبريد user@example.com"
 )
-SAMPLE_DIALECT = "شلونك يا خوي وش مسوي الحين"
 SAMPLE_TAfkeet_NUMBERS = [0, 7, 11, 42, 150, 999, 1001, 250000, 1000000]
 
 # Naive regex (no pre-compilation, no deduplication)
@@ -133,7 +132,6 @@ def main() -> None:
     # --- Analyzer ---
     print("ANALYZER")
     print("-" * 85)
-    _print_row(_bench(sahlnlp.detect_dialect, SAMPLE_DIALECT, iterations=10000, label="detect_dialect()"))
     _print_row(_bench(sahlnlp.extract_keywords, SAMPLE_KEYWORDS, iterations=2000, label="extract_keywords()"))
     _print_row(
         _bench(sahlnlp.suggest_correction, "مدرية", ["مدرسة", "مدينة", "مربية"], iterations=10000,

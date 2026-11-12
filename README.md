@@ -16,9 +16,9 @@
 - **Zero external dependencies** — only uses Python's built-in standard library
 - **High performance** — pre-compiled regex patterns, minimal memory footprint
 - **Full type hints** — excellent IDE support and autocompletion
-- **Comprehensive** — cleaning, normalization, numeral conversion, number-to-words, dialect detection, keyword extraction, and fuzzy matching
-- **Well-tested** — 255 tests with 100% pass rate and 98%+ coverage
-- **Advanced algorithms from scratch** — TF-IDF, Levenshtein distance, and weighted dialect classification built with zero external libraries
+- **Comprehensive** — cleaning, normalization, numeral conversion, number-to-words, keyword extraction, and fuzzy matching
+- **Well-tested** — automated tests cover the public text-processing features
+- **Advanced algorithms from scratch** — TF-IDF and Levenshtein distance built with zero external libraries
 
 ---
 
@@ -51,10 +51,6 @@ sahlnlp.tafkeet(150)
 sahlnlp.indic_to_arabic("٣ أبريل ٢٠٢٥")
 # => "3 أبريل 2025"
 
-# Detect Arabic dialect (Gulf, Levantine, Egyptian, Maghrebi)
-sahlnlp.detect_dialect("شلونك يا خوي")
-# => {"Gulf": 1.0, "Levantine": 0.0, "Egyptian": 0.0, "Maghrebi": 0.0}
-
 # Extract keywords using pure-Python TF-IDF
 sahlnlp.extract_keywords("الذكاء الاصطناعي فرع مهم. الذكاء الاصطناعي متطور.", top_n=3)
 # => [("الاصطناعي", 0.12), ("متطور", 0.10), ("فرع", 0.10)]
@@ -67,12 +63,6 @@ sahlnlp.suggest_correction("مدرية", ["مدرسة", "مدينة", "مربي�
 ---
 
 ## Architecture & Data Flow
-
-### Diagram 1 — v1.0.0 Monolithic Architecture
-
-<p align="center">
-  <img src="docs/sahl-nlp-v1-architecture.svg" alt="SahlNLP v1.0.0 Architecture" width="100%">
-</p>
 
 ### Diagram 2 — Performance & Data Lifecycle
 
@@ -361,17 +351,6 @@ Patterns are ordered by **detection confidence** — highest-specificity pattern
 
 ### Analyzer Module — From-Scratch Implementations
 
-#### Dialect Detection
-
-Uses **weighted lexicon scoring** with bigram analysis:
-
-1. **Tokenize** input → split on whitespace/punctuation
-2. **Generate bigrams** → capture multi-word dialect markers (e.g., "شلونك يا")
-3. **Score** → look up each token + bigram against 4 dialect dictionaries with pre-assigned weights
-4. **Normalize** → convert raw scores to probabilities (sum to 1.0)
-
-Dictionary lookups are O(1) per token via Python hash tables. Total complexity: O(n) where n = text length.
-
 #### TF-IDF Keyword Extraction
 
 A complete TF-IDF implementation with zero external dependencies:
@@ -416,7 +395,6 @@ All benchmarks run on **Python 3.13, Intel Core i7** using `time.perf_counter()`
 | `remove_html_and_links()` | ~628K ops/s | 0.0017 ms | O(n) |
 | `normalize_search()` | ~306K ops/s | 0.0034 ms | O(n) |
 | `clean_all()` | ~238K ops/s | 0.0043 ms | O(n) |
-| `detect_dialect()` | ~183K ops/s | 0.0056 ms | O(n) |
 | `mask_sensitive_info()` | ~112K ops/s | 0.0091 ms | O(n) |
 | `suggest_correction()` | ~38K ops/s | 0.0270 ms | O(m·n) |
 | `extract_keywords()` | ~15K ops/s | 0.0685 ms | O(n·log n) |
@@ -453,17 +431,6 @@ For real-time, high-volume Arabic text streams — API backends, chatbots, searc
 ---
 
 ### Advanced Analysis (`sahlnlp.analyzer`) — *Built from scratch, zero dependencies*
-
-#### `detect_dialect(text)`
-Detect the most likely Arabic dialect using weighted lexicon-based classification. Supports Gulf, Levantine, Egyptian, and Maghrebi dialects.
-
-```python
-sahlnlp.detect_dialect("شلونك يا خوي")
-# => {"Gulf": 1.0, "Levantine": 0.0, "Egyptian": 0.0, "Maghrebi": 0.0}
-
-sahlnlp.detect_dialect("عاوز اروح ازاي")
-# => {"Gulf": 0.0, "Levantine": 0.0, "Egyptian": 1.0, "Maghrebi": 0.0}
-```
 
 #### `extract_keywords(text, top_n=5)`
 Extract top keywords using a pure-Python TF-IDF implementation. Splits text on punctuation for IDF calculation and filters Arabic stop-words.
@@ -523,25 +490,11 @@ training_texts = [row["text"] for row in result["cleaned"]]
 rejected_rows = result["rejected"]
 ```
 
-By default, the cleaner tests each text transformation against the corpus
-dialect profile and confident per-line dialect predictions before applying it.
-It removes tashkeel, tatweel, HTML and links, collapses whitespace, and reduces
-repeated-character flooding only when the measured drift stays within
-`max_dialect_drift` (default `0.08`). Otherwise it skips that operation and
-reports why. It then filters short or mostly non-Arabic lines and removes exact
-duplicates. The report includes each operation's measured distribution shift,
-confident-label flip rate, before/after dialect profile, and any final drift
-caused by filtering or deduplication. Per-line output includes a predicted
-dialect.
+The cleaner applies the selected transformations in a fixed order, then filters short or mostly non-Arabic lines and removes exact duplicates. The result includes each applied step and a reason for every rejected line.
 
 Set `remove_links=False` to preserve URLs, `deduplicate=False` to keep repeated
-lines, or `reduce_repeated_chars=False` to skip flooding reduction. Adjust
-`min_words`, `min_arabic_ratio`, and `max_dialect_drift` for the corpus you are
-preparing. Dialect profiles are estimates from Sahl's bundled classifier, so
-review them against your own labeled sample before using them as a strict
-linguistic guarantee. Run `python benchmarks/corpus_dialect_preservation.py` for
-a reproducible smoke test on bundled labeled examples with synthetic noise.
-It does not measure real-world corpus quality or downstream model gains.
+lines, or `reduce_repeated_chars=False` to skip repeated-character reduction.
+Adjust `min_words` and `min_arabic_ratio` for the corpus you are preparing.
 
 ---
 
@@ -595,9 +548,9 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 - **صفر تبعيات خارجية** — تستخدم فقط مكتبة بايثون القياسية
 - **أداء عالي** — أنماط regex مجمعة مسبقاً، وبصمة ذاكرة ضئيلة
 - **كتابة الأنواع الكاملة** — دعم ممتاز للمحررات والأكمل التلقائي
-- **شامل** — تنظيف، تطبيع، تحويل أرقام، تفقيط، كشف لهجة، استخراج كلمات مفتاحية، تطابق تقريبي، وحجب المعلومات الحساسة
-- **خوارزميات متقدمة من الصفر** — TF-IDF، مسافة ليفنشتاين، تصنيف اللهجات، وحجب PII مبنية بدون مكتبات خارجية
-- **مختبر بالكامل** — 255 اختبار بنسبة نجاح 100% وتغطية 98%+
+- **شامل** — تنظيف، تطبيع، تحويل أرقام، تفقيط، استخراج كلمات مفتاحية، تطابق تقريبي، وحجب المعلومات الحساسة
+- **خوارزميات متقدمة من الصفر** — TF-IDF، مسافة ليفنشتاين، وحجب PII مبنية بدون مكتبات خارجية
+- **مختبر بالكامل** — اختبارات آلية تغطي وظائف معالجة النصوص
 
 ## التثبيت
 

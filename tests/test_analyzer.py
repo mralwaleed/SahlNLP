@@ -1,4 +1,4 @@
-"""Tests for sahlnlp.core.analyzer module — dialect detection, TF-IDF, Levenshtein."""
+"""Tests for keyword extraction and fuzzy matching utilities."""
 
 import math
 
@@ -9,99 +9,13 @@ from sahlnlp.core.analyzer import (
     _split_documents,
     compute_idf,
     compute_tf,
-    detect_dialect,
     extract_keywords,
     suggest_correction,
 )
 
 
 # ===========================================================================
-# Feature 1: Dialect Radar
-# ===========================================================================
-class TestDetectDialect:
-    def test_gulf_sentence(self):
-        result = detect_dialect("شلونك يا خوي شو مسوي")
-        assert result["Gulf"] > 0.5
-
-    def test_gulf_signature_words(self):
-        result = detect_dialect("ماكو شي مو زين ياخي")
-        assert result["Gulf"] > 0.8
-
-    def test_levantine_sentence(self):
-        result = detect_dialect("شو بعمل هيك يا زلمة")
-        assert result["Levantine"] > 0.5
-
-    def test_mixed_input_gives_confident_result(self):
-        # Mixed Gulf + Levantine — model confidently picks the dominant dialect
-        result = detect_dialect("شلونك؟ منيح؟ والله كتير اشتقنا لك يا زلمة")
-        winner = max(result, key=result.get)
-        assert result[winner] > 0.5, f"Winner {winner} only {result[winner]:.2%}"
-
-    def test_levantine_signature_words(self):
-        result = detect_dialect("هيك منيح ليش نحنا هلق")
-        assert result["Levantine"] > 0.9
-
-    def test_egyptian_sentence(self):
-        result = detect_dialect("عاوز اروح ازاي عشان كده")
-        assert result["Egyptian"] > 0.5
-
-    def test_egyptian_signature_words(self):
-        result = detect_dialect("مفيش مش عايز دلوقتي بتاع أوي")
-        assert result["Egyptian"] > 0.9
-
-    def test_maghrebi_sentence(self):
-        result = detect_dialect("واش كيداير بزاف راهو")
-        assert result["Maghrebi"] > 0.5
-
-    def test_maghrebi_signature_words(self):
-        result = detect_dialect("بزاف واش كيفاش علاش بصح")
-        assert result["Maghrebi"] > 0.9
-
-    def test_bigram_boost_egyptian(self):
-        result = detect_dialect("عاوز اروح عامل ايه")
-        assert result["Egyptian"] > 0.8
-
-    def test_percentages_sum_to_one(self):
-        result = detect_dialect("شلونك يا زلمة عشان كده بزاف")
-        total = sum(result.values())
-        assert abs(total - 1.0) < 1e-3, f"Percentages sum to {total}, expected 1.0"
-
-    def test_all_values_between_zero_and_one(self):
-        result = detect_dialect("شلونك يا زلمة عشان كده بزاف")
-        for name, pct in result.items():
-            assert 0.0 <= pct <= 1.0, f"{name}={pct} out of [0,1] range"
-
-    def test_empty_string(self):
-        result = detect_dialect("")
-        total = sum(result.values())
-        assert abs(total - 1.0) < 1e-6
-
-    def test_no_markers_still_classifies(self):
-        # ML model always produces a confident distribution — no equal fallback
-        result = detect_dialect("مرحبا بالعالم اليوم")
-        total = sum(result.values())
-        assert abs(total - 1.0) < 1e-3
-        assert set(result.keys()) == {"Gulf", "Levantine", "Egyptian", "Maghrebi"}
-
-    def test_mixed_dialect_confident(self):
-        # Mixed input — model picks a confident winner
-        result = detect_dialect("شلونك يا زلمة بزاف")
-        winner = max(result, key=result.get)
-        assert result[winner] > 0.5
-        total = sum(result.values())
-        assert abs(total - 1.0) < 1e-3
-
-    def test_type_error(self):
-        with pytest.raises(TypeError):
-            detect_dialect(None)  # type: ignore[arg-type]
-
-    def test_returns_four_dialects(self):
-        result = detect_dialect("مرحبا")
-        assert set(result.keys()) == {"Gulf", "Levantine", "Egyptian", "Maghrebi"}
-
-
-# ===========================================================================
-# Feature 2: TF-IDF Keyword Extraction
+# Feature 1: TF-IDF Keyword Extraction
 # ===========================================================================
 class TestComputeTF:
     def test_basic_tf(self):
@@ -206,7 +120,7 @@ class TestExtractKeywords:
 
 
 # ===========================================================================
-# Feature 3: Levenshtein Fuzzy Matcher
+# Feature 2: Levenshtein Fuzzy Matcher
 # ===========================================================================
 class TestLevenshteinDistance:
     def test_identical_strings(self):

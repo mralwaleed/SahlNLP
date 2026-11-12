@@ -86,14 +86,6 @@ class TestConverterFallbacks:
 # ===========================================================================
 class TestAnalyzerFallbacks:
     @patch.object(analyzer, "_tokenize")
-    def test_detect_dialect_fallback(self, mock_tok):
-        mock_tok.side_effect = RuntimeError("boom")
-        result = analyzer.detect_dialect("test")
-        # Should return equal distribution
-        assert len(result) == 4
-        assert all(v > 0 for v in result.values())
-
-    @patch.object(analyzer, "_tokenize")
     def test_extract_keywords_fallback(self, mock_tok):
         mock_tok.side_effect = RuntimeError("boom")
         result = analyzer.extract_keywords("test")

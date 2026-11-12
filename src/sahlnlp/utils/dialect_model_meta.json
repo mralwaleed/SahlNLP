@@ -1,9 +1,0 @@
-{
-  "best": "LogisticRegression",
-  "nb_accuracy": 0.9,
-  "nb_macro_f1": 0.8986,
-  "lr_accuracy": 0.9,
-  "lr_macro_f1": 0.9017,
-  "test_size": 40,
-  "train_size": 156
-}
